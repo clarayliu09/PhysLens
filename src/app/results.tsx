@@ -2,11 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
+const NUM_OBJECTS = 2; // will later be a value passed in by the object detection data
+
 export default function ResultScreen() {
 
-  const { imageUri } = useLocalSearchParams<{
+  const { imageUri, objects} = useLocalSearchParams<{
     imageUri: string;
+    objects: string;
   }>();
+
+  const detectedObjects = JSON.parse(objects);
+  console.log(detectedObjects);
 
   return (
     <View style={styles.container}>
@@ -16,15 +22,20 @@ export default function ResultScreen() {
           size={30}
           color="white"
         />
-
         <Text style={styles.primaryButtonText}>Return</Text>
       </Pressable> 
 
-      <Image 
-        source={{ uri: imageUri }}
-        style = {styles.image}
-      ></Image>
-      
+      <View style={styles.imgContainer}>
+         <Image 
+          source={{ uri: imageUri }}
+          style = {styles.image}
+        ></Image>
+      </View>
+
+      <View style={styles.visControls}>
+
+      </View>
+
 
     </View>
   );
@@ -33,9 +44,18 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    paddingTop: 40,
+    //alignItems: "center",
+    padding: 40,
     backgroundColor: "#C7C3BD", //dark navy: 07111F",
+  },
+
+  imgContainer: {
+    height: 500,
+    backgroundColor: '#07111F',
+  },
+
+  visControls: {
+
   },
 
   image: {
