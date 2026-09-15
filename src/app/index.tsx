@@ -3,6 +3,8 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
+const PRIMARY_TEXT_COLOR = "white"
+
 export default function HomeScreen() {
 
   function pressed() {
@@ -124,7 +126,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#07111F",
+    backgroundColor: "#C7C3BD", //dark navy: 07111F
   },
 
   icon: {
@@ -136,14 +138,14 @@ const styles = StyleSheet.create({
     marginTop: -150,
     fontSize: 80,
     fontWeight: "700",
-    color: "white",
+    color: PRIMARY_TEXT_COLOR,
   },
 
   subtitle: {
     fontSize: 25,
     margin: 8,
     textAlign: "center",
-    color: "white",
+    color: PRIMARY_TEXT_COLOR,
   },
 
   button: {
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
 
   primaryButtonText: {
     fontSize: 15,
-    color: "white",
+    color: PRIMARY_TEXT_COLOR,
     textAlign: "center",
   },
 });
