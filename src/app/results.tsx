@@ -1,7 +1,11 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function ResultScreen() {
+
+  const { imageUri } = useLocalSearchParams<{
+    imageUri: string;
+  }>();
 
   return (
     <View style={styles.container}>

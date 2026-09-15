@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
@@ -12,21 +12,32 @@ let LOADING_TEXTS: String[] = [
 ]
 
 export default function AnalyzingScreen() {
-  // fake loading screen for now
+  // get imageUri from home screen
+  const { imageUri } = useLocalSearchParams<{
+    imageUri: string;
+  }>();
+
+  // fake 4-sec loading screen for now
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace("/results");
+    //start and save timer
+    const timer = setTimeout(() => { 
+      // replace analyzing screen with results screen and send imageUri
+      router.replace({
+        pathname: "/results", 
+        params: {imageUri}
+      });
     }, 4000);
 
-    return () => clearTimeout(timer);
+    //cancel the timer if effect ends early
+    return () => clearTimeout(timer); 
   }, []);
 
   return (
     <View style={styles.container}>
 
-      <ActivityIndicator size="large" />
-
       <Text style={styles.title}>Analyzing scene...</Text>
+
+      <ActivityIndicator size="large" />
 
       <Text style={styles.subtitle}>
         {LOADING_TEXTS[Math.floor(Math.random() * (Math.floor(LOADING_TEXTS.length)))]}
@@ -44,13 +55,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 75,
+    fontSize: 40,
     fontWeight: "700",
     color: "white",
+    marginBottom: 10,
   },
 
   subtitle: {
-    fontSize: 25,
+    fontSize: 20,
     margin: 16,
     textAlign: "center",
     color: "white",
