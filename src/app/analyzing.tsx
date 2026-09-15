@@ -23,17 +23,23 @@ export default function AnalyzingScreen() {
     const analyzeImage = async () => {
 
       try {
+        // Get the image stored at the local image URI
+        const imageResponse = await fetch(imageUri);
+
+        // Convert the image into a Blob
+        const imageBlob = await imageResponse.blob();
+
         const formData = new FormData();
 
-        formData.append("file", {
-          uri: imageUri, //image location on phone
-          name: "scene.jpg",
-          type: "image/jpeg",
-        } as any);
+        formData.append(
+          "file", 
+          imageBlob,
+          "scene",
+        );
 
         //send image to FastAPI
         const response = await fetch(
-          "http://YOUR_COMPUTER_IP:8000/detect",
+          "http://192.168.4.36:8000/detect",
             {
               method: "POST",
               body: formData,
@@ -69,7 +75,7 @@ export default function AnalyzingScreen() {
 
     analyzeImage();
 
-  });
+  }, [imageUri]);
 
   /*
   // fake 4-sec loading screen for now
