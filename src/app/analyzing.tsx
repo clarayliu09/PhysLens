@@ -1,8 +1,10 @@
+import { File } from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
+import { fetch } from "expo/fetch";
 import { useEffect } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
-let LOADING_TEXTS: String[] = [
+let LOADING_TEXTS: string[] = [
   "PhysLens is identifying objects, forces and physics concepts",
   "Letting Force = mass x acceleration",
   "Neglecting negligable things...",
@@ -23,42 +25,51 @@ export default function AnalyzingScreen() {
     const analyzeImage = async () => {
 
       try {
-        // Get the image stored at the local image URI
-        const imageResponse = await fetch(imageUri);
 
-        // Convert the image into a Blob
-        const imageBlob = await imageResponse.blob();
+        console.log("1. imageUri =", imageUri);
+        // Get the image stored at the local image URI
+        console.log("2. Creating File from image URI");
+
+        const imageFile = new File(imageUri);
+
+        console.log("3. File created:", imageFile.uri);
+        console.log("4. File size:", imageFile.size);
 
         const formData = new FormData();
+        formData.append("file", imageFile);
 
-        formData.append(
-          "file", 
-          imageBlob,
-          "scene",
-        );
+        console.log("5. FormData SUCCESS");
 
-        //send image to FastAPI
+        console.log("6. About to fetch FASTAPI");
+
         const response = await fetch(
-          "http://192.168.4.36:8000/detect",
-            {
-              method: "POST",
-              body: formData,
-            }
+          "http://192.168.4.32:8000/detect",
+          {
+            method: "POST",
+            body: formData,
+          }
         );
 
-        //make sure no errors happen
+        console.log("7. FastAPI fetch SUCCESS:", response.status);
+
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error("FastAPI error:", errorText);
           throw new Error("Object detection failed");
         }
 
         const data = await response.json();
-        console.log("Detected objects:", data.objects);
 
-        //move on to results page after detection is finished
+        console.log("8. Detected objects:", data.objects);
+
         router.replace({
           pathname: "/results",
-          params: {imageUri, objects: JSON.stringify(data.objects)},
+          params: {
+            imageUri,
+            objects: JSON.stringify(data.objects),
+          },
         });
+        
 
       } catch (error) {
         console.error("Analysis error:", error);
@@ -113,7 +124,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#C7C3BD", //dark navy: 07111F
+    backgroundColor: "#07111F", //cream: #C7C3BD
   },
 
   title: {

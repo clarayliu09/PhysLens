@@ -16,7 +16,7 @@ def detect_objects(image = Image):
     class_id = int(box.cls[0]) #class ID
     label = result.names[class_id] #converting class ID to understandable label
 
-    coords = box.xyxy[0].tolist() #coords of boundaries
+    coords = box.xyxy[0].tolist() #coords of boundaries - type: list
     xmin = float(coords[0])
     ymin = float(coords[1])
     xmax = float(coords[2])

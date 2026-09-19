@@ -1,14 +1,21 @@
 {
   "expo": {
-    "name": "physics_visualizer",
+    "name": "PhysLens",
     "slug": "physics_visualizer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/home-icon.png",
     "scheme": "physicsvisualizer",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/home-icon.png",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "PhysLens connects to the local development server to analyze images.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      },
+      "bundleIdentifier": "com.claraliu990.physics-visualizer"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,8 +35,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
+          "backgroundColor": "#C7C3BD",
+          "image": "./assets/images/home-icon.png",
           "imageWidth": 76
         }
       ]

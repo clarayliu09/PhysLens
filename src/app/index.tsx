@@ -23,7 +23,7 @@ export default function HomeScreen() {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true, //lets users edit the image (crop/rotate)
-      quality: 1, //compress for max quality
+      quality: 1, // max quality
     })
     
     if (!result.canceled) {
@@ -126,12 +126,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#C7C3BD", //dark navy: 07111F
+    backgroundColor: "#07111F", //cream: #C7C3BD
   },
 
   icon: {
-    width: 400,
-    height: 400,
+    width: 375,
+    height: 375,
   },
 
   title: {

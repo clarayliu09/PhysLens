@@ -2,8 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-const NUM_OBJECTS = 2; // will later be a value passed in by the object detection data
-
 export default function ResultScreen() {
 
   const { imageUri, objects} = useLocalSearchParams<{
@@ -50,7 +48,7 @@ const styles = StyleSheet.create({
   },
 
   imgContainer: {
-    height: 500,
+    padding: 10,
     backgroundColor: '#07111F',
   },
 
