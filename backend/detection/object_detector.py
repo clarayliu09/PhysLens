@@ -24,6 +24,7 @@ def detect_objects(image = Image):
 
     conf = float(box.conf[0]) #confidence score
 
+    # create python dictionary for each object
     object = {
       "label": label,
       "confidence": conf,

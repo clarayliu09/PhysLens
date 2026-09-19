@@ -29,44 +29,59 @@ export default function AnalyzingScreen() {
         console.log("1. imageUri =", imageUri);
         // Get the image stored at the local image URI
         console.log("2. Creating File from image URI");
-
+        
+        // turn URI into file and assign to imageFile
         const imageFile = new File(imageUri);
 
         console.log("3. File created:", imageFile.uri);
         console.log("4. File size:", imageFile.size);
 
+        // create empty FormData object
         const formData = new FormData();
+
+        // "fill" formData with info
         formData.append("file", imageFile);
 
         console.log("5. FormData SUCCESS");
 
         console.log("6. About to fetch FASTAPI");
 
+        // send HTTP request to FastAPI
+        // first arg: URL to go to
+        // {} creates JS object with method (POST request) and the body
         const response = await fetch(
           "http://192.168.4.32:8000/detect",
           {
             method: "POST",
-            body: formData,
+            body: formData, //actual data that i want to send
           }
         );
 
+        /*
+        response contains info about HTTP response
+        if response.status is 200, HTTP request succeeded
+        */
+
         console.log("7. FastAPI fetch SUCCESS:", response.status);
 
+        // if HTTP request was unsuccessful
         if (!response.ok) {
           const errorText = await response.text();
           console.error("FastAPI error:", errorText);
           throw new Error("Object detection failed");
         }
-
+        
+        // store JSON response in data variable
         const data = await response.json();
 
         console.log("8. Detected objects:", data.objects);
 
+        // navigate to results screen (removes the /analyzing screen from history too)
         router.replace({
           pathname: "/results",
           params: {
             imageUri,
-            objects: JSON.stringify(data.objects),
+            objects: JSON.stringify(data.objects), //data.objects is js array, but params have to be in string form
           },
         });
         
