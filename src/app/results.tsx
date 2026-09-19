@@ -2,6 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
+type DetectedObject = {
+  label: string,
+  confidence: number;
+  box: {
+    xmin: number;
+    ymin: number;
+    xmax: number;
+    ymax: number;
+  };
+};
+
 export default function ResultScreen() {
 
   const { imageUri, objects} = useLocalSearchParams<{
@@ -9,31 +20,43 @@ export default function ResultScreen() {
     objects: string;
   }>();
 
-  const detectedObjects = JSON.parse(objects);
-  console.log(detectedObjects);
+  const detectedObjects: DetectedObject[] = JSON.parse(objects);
+  const numObjects = detectedObjects.length;
 
   return (
     <View style={styles.container}>
-       <Pressable style={styles.primaryButton} onPress={() => router.dismissAll()}> 
+      <Image 
+        source={{ uri: imageUri }}
+        style = {styles.image}
+      ></Image>
+
+
+      <View style={styles.visControls}>
+        <Text style={styles.sectionTitle}>
+          Detected Objects ({numObjects})
+        </Text>
+
+        {detectedObjects.map((object, index) => (
+          <View key={index} style={styles.objectRow}>
+            <Text style={styles.objectLabel}>
+              {object.label}
+            </Text>
+
+            <Text style={styles.confidence}>
+              {Math.round(object.confidence * 100)}%
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <Pressable style={styles.primaryButton} onPress={() => router.dismissAll()}> 
         <Ionicons
           name="return-up-back"
           size={30}
           color="white"
         />
         <Text style={styles.primaryButtonText}>Return</Text>
-      </Pressable> 
-
-      <View style={styles.imgContainer}>
-         <Image 
-          source={{ uri: imageUri }}
-          style = {styles.image}
-        ></Image>
-      </View>
-
-      <View style={styles.visControls}>
-
-      </View>
-
+      </Pressable>   
 
     </View>
   );
@@ -42,18 +65,42 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    //alignItems: "center",
-    padding: 40,
-    backgroundColor: "#C7C3BD", //dark navy: 07111F",
-  },
-
-  imgContainer: {
-    padding: 10,
-    backgroundColor: '#07111F',
+    alignItems: "center",
+    paddingTop: 40,
+    backgroundColor: "#07111F", //cream: C7C3BD",
   },
 
   visControls: {
+    marginTop: 20,
+  },
 
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "white",
+    marginBottom: 12,
+  },
+
+  objectRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: "white",
+    borderRadius: 10,
+  },
+
+  objectLabel: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#07111F",
+  },
+
+  confidence: {
+    fontSize: 15,
+    color: "#555",
   },
 
   image: {
