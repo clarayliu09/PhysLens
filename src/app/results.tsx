@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 type DetectedObject = {
@@ -13,6 +14,9 @@ type DetectedObject = {
   };
 };
 
+const DISPLAY_HEIGHT = 450;
+const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
+
 export default function ResultScreen() {
 
   const { imageUri, objects} = useLocalSearchParams<{
@@ -23,13 +27,66 @@ export default function ResultScreen() {
   const detectedObjects: DetectedObject[] = JSON.parse(objects);
   const numObjects = detectedObjects.length;
 
+  const [imageSize, setImageSize] = useState({width:0, height:0});
+
+  useEffect(() => {
+    if (!imageUri) return;
+
+    Image.getSize(imageUri, (width, height) => setImageSize({width:width, height:height}))
+  }, [imageUri]); //runs this code whenever the imageUri changes
+
+  let scale = 0;
+  if (imageSize.width > 0 && imageSize.height > 0) {
+    scale = Math.min(DISPLAY_WIDTH/imageSize.width, DISPLAY_HEIGHT/imageSize.height);
+  }
+
+  const w = imageSize.width * scale;
+  const h = imageSize.height * scale;
+
+  // calculate offsets because resizeMode preserves the original image's ratio
+  //    only one side (length or width) reaches the set DISPLAY_WIDTH/DISPLAY_HEIGHT values
+  //    actual x and y values of the photo begin at xoff and yoff
+  const xoff = (DISPLAY_WIDTH - w) / 2; // display_width - w --> unused horiz space
+  const yoff = (DISPLAY_HEIGHT - h) /2;
+
   return (
     <View style={styles.container}>
-      <Image 
-        source={{ uri: imageUri }}
-        style = {styles.image}
-      ></Image>
+      <View style={styles.imageContainer}>
+        <Image 
+          source={{ uri: imageUri }}
+          style = {styles.image}
+        ></Image>
 
+        {detectedObjects.map((object, index) => {
+          const left = object.box.xmin * scale + xoff;
+          const top = object.box.ymin * scale + yoff;
+
+          const width =
+            (object.box.xmax - object.box.xmin) * scale;
+
+          const height =
+            (object.box.ymax - object.box.ymin) * scale;
+
+          return (
+            <View
+              key={index}
+              style={[
+                styles.boundingBox,
+                {
+                  left,
+                  top,
+                  width,
+                  height,
+                },
+              ]}
+            >
+              <Text style={styles.boxLabel}>
+                {object.label /*object {index+1}*/}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
 
       <View style={styles.visControls}>
         <Text style={styles.sectionTitle}>
@@ -39,7 +96,7 @@ export default function ResultScreen() {
         {detectedObjects.map((object, index) => (
           <View key={index} style={styles.objectRow}>
             <Text style={styles.objectLabel}>
-              {object.label}
+              {object.label /*object {index+1}*/} 
             </Text>
 
             <Text style={styles.confidence}>
@@ -70,8 +127,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#07111F", //cream: C7C3BD",
   },
 
+  imageContainer: {
+  width: DISPLAY_WIDTH,
+  height: DISPLAY_HEIGHT,
+  position: "relative",
+},
+
   visControls: {
     marginTop: 20,
+  },
+
+  boundingBox: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "#FF3B30",
+  },
+
+  boxLabel: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FF3B30",
+    color: "white",
+    fontSize: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
 
   sectionTitle: {
@@ -104,10 +182,10 @@ const styles = StyleSheet.create({
   },
 
   image: {
-    width: 350,
-    height: 350,
+    width: DISPLAY_WIDTH,
+    height: DISPLAY_HEIGHT,
     borderRadius: 20,
-    resizeMode: "contain",
+    resizeMode: "contain", //shrink the entire photo until it fits in the container
   },
 
   primaryButton: {
