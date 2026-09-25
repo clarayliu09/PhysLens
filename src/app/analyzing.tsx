@@ -19,6 +19,8 @@ export default function AnalyzingScreen() {
     imageUri: string;
   }>();
 
+  const API_URL = "http://MacBook-Pro-2022.local:8000";
+
   // send image to backend for object detection
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function AnalyzingScreen() {
         // first arg: URL to go to
         // {} creates JS object with method (POST request) and the body
         const response = await fetch(
-          "http://192.168.4.32:8000/detect",
+          `${API_URL}/detect`,
           {
             method: "POST",
             body: formData, //actual data that i want to send

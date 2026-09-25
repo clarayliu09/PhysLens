@@ -2,8 +2,9 @@ from fastapi import FastAPI, UploadFile, File
 from PIL import Image
 from io import BytesIO
 from detection.object_detector import detect_objects
+from scene.scene_analyzer import analyze_scene
 
-# create FastAPI app
+#create FastAPI app
 app = FastAPI()
 
 @app.get("/")
@@ -16,18 +17,29 @@ def home():
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
 
-    # Read uploaded image as bytes
+    #read uploaded image as bytes
     image_bytes = await file.read()
 
-    # Convert bytes into an image YOLO can understand
+    #convert bytes into an image YOLO can understand
     image = Image.open(
         BytesIO(image_bytes)
     ).convert("RGB")
 
-    # Run our object detector
+    #run object detector
     detections = detect_objects(image)
 
-    # Return results to the app as JSON
+    #run scene analyzer
+    scene = analyze_scene(image_bytes, detections)
+
+    for object in scene.objects:
+        ind = object.detection_index
+
+        if 0<=ind<len(detections):
+            # change the label of objects in YOLO's output to the more accurate provided by Qwen model
+            detections[ind]["label"] = object.name
+
+    #return results to the app as JSON
     return {
-        "objects": detections
+        "objects": detections,
+        "scene": scene.model_dump() #converts SceneAnalysis object to dictionary
     }
