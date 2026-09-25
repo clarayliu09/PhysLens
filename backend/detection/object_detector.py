@@ -5,6 +5,10 @@ from PIL import Image #import it from python imaging library
 model = YOLO("yolo11n.pt")
 
 def detect_objects(image = Image):
+  """
+  Runs YOLO model on selected image and returns a list of dictionaries. 
+  Each dictionary contains information on one object
+  """
   # do obj detection on image using model
   results = model(image) #returns a list of Results objects, one Results object per image
   result = results[0]

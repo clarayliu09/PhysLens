@@ -22,7 +22,7 @@ export default function HomeScreen() {
     
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true, //lets users edit the image (crop/rotate)
+      allowsEditing: false, //dont let users edit the image
       quality: 1, // max quality
     })
     
@@ -48,7 +48,7 @@ export default function HomeScreen() {
     
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 1,
     });
     
