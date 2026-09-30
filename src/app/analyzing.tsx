@@ -77,6 +77,7 @@ export default function AnalyzingScreen() {
         const data = await response.json();
 
         console.log("8. Detected objects:", data.objects);
+        console.log("9. Physics results:", data.physics);
 
         // navigate to results screen (removes the /analyzing screen from history too)
         router.replace({
@@ -84,6 +85,7 @@ export default function AnalyzingScreen() {
           params: {
             imageUri,
             objects: JSON.stringify(data.objects), //data.objects is js array, but params have to be in string form
+            physics: JSON.stringify(data.physics),
           },
         });
         

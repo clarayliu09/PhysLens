@@ -2,7 +2,7 @@ import base64
 import json
 import urllib.request
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, AliasChoices
 from typing import Literal
 from PIL import Image
 from io import BytesIO
@@ -21,7 +21,12 @@ class Relationship(BaseModel):
 
 
 class SceneObject(BaseModel):
-  detection_index: int
+  detection_index: int = Field(
+    validation_alias=AliasChoices(
+        "detection_index",
+        "index"
+    )
+  )
   name: str
   relationships: list[Relationship]
 
@@ -105,7 +110,7 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   {{
       "objects": [
           {{
-              "detection_index": 0,
+              "index": 0,
               "name": "book",
               "relationships": [
                   {{
@@ -143,7 +148,6 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   model_output = result["message"]["content"]
 
   scene_data = json.loads(model_output)
-  print(scene_data)
 
   return SceneAnalysis.model_validate(scene_data) 
   # SceneAnalysis.model_validate(scene_data) creates a SceneAnalysis

@@ -14,17 +14,37 @@ type DetectedObject = {
   };
 };
 
+type Force = {
+  type: "gravity" | "normal" | "tension" | "friction";
+  direction: "up" | "down" | "left" | "right"; //simple cases for now
+  label: string;
+};
+
+type ObjectPhysics = {
+  index: number;
+  forces: Force[];
+};
+
+
 const DISPLAY_HEIGHT = 450;
 const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
 
 export default function ResultScreen() {
 
-  const { imageUri, objects} = useLocalSearchParams<{
+  const { imageUri, objects, physics} = useLocalSearchParams<{
     imageUri: string;
     objects: string;
+    physics: string;
   }>();
 
   const detectedObjects: DetectedObject[] = JSON.parse(objects);
+  const physicsResults: ObjectPhysics[] = JSON.parse(physics);
+
+  console.log(
+    "Physics in results screen:",
+    JSON.stringify(physicsResults, null, 2)
+  );
+
   const numObjects = detectedObjects.length;
 
   const [imageSize, setImageSize] = useState({width:0, height:0});
