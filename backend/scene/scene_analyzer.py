@@ -65,52 +65,106 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   image_base64 = base64.b64encode(resized_image).decode("utf-8")
 
   prompt = f"""
-  You are analyzing a physical scene for a physics education app.PermissionError
+  You are analyzing a physical scene for a physics education app.
 
   An object detector found these objects:
 
-  {json.dumps(detections,indent=2)}
+  {json.dumps(detections, indent=2)}
 
-  Use the full image to identify what the detected objects actually are 
-  and how they physically interact with their surroundings.
+  Use the full image to:
+  1. Identify what each detected object actually is.
+  2. Identify visible physical relationships between objects and their surroundings.
 
-  For each important detected object, return:
+  You are performing SCENE UNDERSTANDING ONLY.
+  Do NOT infer forces or physics concepts.
+
+  For EVERY detected object, return:
   - detection_index: its index in the detection list
-  - name: a clear everyday name for the object
-  - relationships: physical relationships visible in the image
+  - name: a clear, specific everyday name for the object
+  - relationships: all clearly visible physical relationships involving that object
+
+  For each detected object, carefully check:
+  1. Is it resting on or sitting on another object or surface?
+  2. Is it hanging from another object?
+  3. Is it physically attached to another object?
+  4. Is it touching another object?
+
+  Pay special attention to relationships BETWEEN detected objects.
+  Do not only check relationships between detected objects and the
+  background or environment.
 
   Allowed relationship types:
 
   - supported_by:
-    The object is resting on a surface that supports its weight.
-    Examples: a book on a table, a bottle on the floor,
-    a box on a shelf.
+    The object is visibly resting on, sitting on, or being held up by
+    another object or surface beneath it.
+
+    Examples:
+    - book resting on table → book supported_by table
+    - cat sitting on chair → cat supported_by chair
+    - box resting on shelf → box supported_by shelf
+    - chair standing on floor → chair supported_by floor
 
   - hanging_from:
-    The object is suspended from another object.
-    Examples: a lamp hanging from a cord, a mass hanging from a string.
+    The object is visibly suspended from another object.
+
+    Examples:
+    - lamp hanging from cord → lamp hanging_from cord
+    - mass hanging from string → mass hanging_from string
 
   - attached_to:
-    The object is physically connected to another object,
+    The object is visibly physically connected to another object,
     but is not hanging from it.
 
   - touching:
-    The objects are in physical contact, but neither object
-    is supporting the other.
+    The object is visibly in physical contact with another object,
+    but neither object is clearly resting on or supported by the other.
 
-  Important:
-  If an object is resting on top of a surface, use "supported_by",
-  NOT "touching".
+  IMPORTANT RULES:
 
-  Do not infer forces or physics concepts.
-  Only describe relationships visible in the image.
+  - If object A is visibly resting on object B, report:
+    A supported_by B
 
-  Return ONLY valid JSON in this format: 
+  - Do NOT create a reverse relationship just because A has a
+    relationship with B. Report only the directly observed relationship.
+
+  - If an object is resting on another object or surface, use
+    "supported_by", NOT "touching".
+
+  - An object may have more than one relationship if multiple
+    relationships are clearly visible.
+
+  - If no allowed relationship is clearly visible for an object,
+    return an empty relationships list.
+
+  - Use the detected objects as spatial hints, but use the full image
+    to determine their actual identities and relationships.
+
+  - Do not invent objects or relationships that are not visually
+    supported by the image.
+
+  - Do NOT infer or mention:
+    gravity,
+    normal forces,
+    tension forces,
+    friction,
+    force direction,
+    force magnitude,
+    Newton's laws,
+    equilibrium,
+    velocity,
+    acceleration,
+    or any other physics conclusions.
+
+  Return ONLY valid JSON.
+  Do not include Markdown, explanations, or text outside the JSON.
+
+  Use exactly this structure:
 
   {{
       "objects": [
           {{
-              "index": 0,
+              "detection_index": 0,
               "name": "book",
               "relationships": [
                   {{
