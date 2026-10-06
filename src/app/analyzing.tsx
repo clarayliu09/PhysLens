@@ -1,8 +1,8 @@
 import { File } from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
 import { fetch } from "expo/fetch";
-import { useEffect } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Animated, StyleSheet, Text, View } from "react-native";
 
 let LOADING_TEXTS: string[] = [
   "PhysLens is identifying objects, forces and physics concepts",
@@ -18,6 +18,13 @@ export default function AnalyzingScreen() {
   const { imageUri } = useLocalSearchParams<{
     imageUri: string;
   }>();
+
+  const [progress, setProgress] = useState(0);
+  const animatedProgress = useRef(new Animated.Value(0)).current;
+
+  const [loadingText, setLoadingText] = useState(
+    LOADING_TEXTS[Math.floor(Math.random() * LOADING_TEXTS.length)]
+  );
 
   const API_URL = "http://MacBook-Pro-2022.local:8000";
 
@@ -75,6 +82,12 @@ export default function AnalyzingScreen() {
         
         // store JSON response in data variable
         const data = await response.json();
+        
+        // finish progress bar
+        setProgress(1);
+        
+        // give progress bar time to reach 100% before leaving page
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
         console.log("8. Detected objects:", data.objects);
         console.log("9. Physics results:", data.physics);
@@ -107,6 +120,39 @@ export default function AnalyzingScreen() {
 
   }, [imageUri]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((current) => {
+        if (current >= 0.9) {
+          return current;
+        }
+
+        const remaining = 0.9 - current;
+        return current + remaining * 0.15;
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const textInterval = setInterval(() => {
+      setLoadingText(
+        LOADING_TEXTS[Math.floor(Math.random() * LOADING_TEXTS.length)]
+      );
+    }, 3000); // change every 3 seconds
+
+    return () => clearInterval(textInterval);
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
   /*
   // fake 4-sec loading screen for now
   useEffect(() => {
@@ -129,10 +175,28 @@ export default function AnalyzingScreen() {
 
       <Text style={styles.title}>Analyzing scene...</Text>
 
-      <ActivityIndicator size="large" color="white" />
+      <View style={styles.progressContainer}>
+        <View style={styles.progressTrack}>
+          <Animated.View
+            style={[
+              styles.progressFill,
+              {
+                width: animatedProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0%", "100%"],
+                }),
+              },
+            ]}
+          />
+        </View>
+
+        <Text style={styles.progressText}>
+          {Math.round(progress * 100)}%
+        </Text>
+      </View>
 
       <Text style={styles.subtitle}>
-        {LOADING_TEXTS[Math.floor(Math.random() * LOADING_TEXTS.length)]}
+        {loadingText}
       </Text>
     </View>
   );
@@ -158,5 +222,31 @@ const styles = StyleSheet.create({
     margin: 16,
     textAlign: "center",
     color: "white",
+  },
+
+  progressContainer: {
+  width: "75%",
+  alignItems: "center",
+  gap: 10,
+},
+
+  progressTrack: {
+    width: "100%",
+    height: 8,
+    backgroundColor: "#263241",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 4,
+  },
+
+  progressText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
