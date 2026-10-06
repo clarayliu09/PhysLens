@@ -1,7 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import Svg, {
+  Line,
+  Polygon,
+  Text as SvgText
+} from "react-native-svg";
 
 type DetectedObject = {
   label: string,
@@ -15,9 +20,9 @@ type DetectedObject = {
 };
 
 type Force = {
-  type: "gravity" | "normal" | "tension" | "friction";
+  type: "gravity" | "normal" | "tension" | "friction"; 
   direction: "up" | "down" | "left" | "right"; //simple cases for now
-  label: string;
+  id: string;
 };
 
 type ObjectPhysics = {
@@ -39,11 +44,6 @@ export default function ResultScreen() {
 
   const detectedObjects: DetectedObject[] = JSON.parse(objects);
   const physicsResults: ObjectPhysics[] = JSON.parse(physics);
-
-  console.log(
-    "Physics in results screen:",
-    JSON.stringify(physicsResults, null, 2)
-  );
 
   const numObjects = detectedObjects.length;
 
@@ -68,6 +68,33 @@ export default function ResultScreen() {
   //    actual x and y values of the photo begin at xoff and yoff
   const xoff = (DISPLAY_WIDTH - w) / 2; // display_width - w --> unused horiz space
   const yoff = (DISPLAY_HEIGHT - h) /2;
+
+  // /* Debugging 
+  physicsResults.forEach((objectPhysics) => {
+    const detectedObject = detectedObjects[objectPhysics.index];
+    
+    if (!detectedObject) {
+      console.warn(
+        `No detected object for physics index ${objectPhysics.index}`
+      );
+      return;
+    }
+
+    const centerX = ((detectedObject.box.xmin + detectedObject.box.xmax) /2) * scale + xoff;
+    const centerY = ((detectedObject.box.ymin + detectedObject.box.ymax)/2) * scale + yoff;
+
+    console.log("Force origin:", {x: centerX, y: centerY});
+
+    console.log("Physics object index:", objectPhysics.index);
+    console.log("Matched detected object:", detectedObject);
+    console.log(
+      "Forces:",
+      JSON.stringify(objectPhysics.forces, null, 2)
+    )
+  })
+
+  // */
+  
 
   return (
     <View style={styles.container}>
@@ -106,6 +133,129 @@ export default function ResultScreen() {
             </View>
           );
         })}
+
+        {imageSize.width > 0 && imageSize.height > 0 &&
+          physicsResults.map((objectPhysics) => {
+            const detectedObject =
+              detectedObjects[objectPhysics.index];
+
+            if (!detectedObject) {
+              return null;
+            }
+
+            const centerX =
+              ((detectedObject.box.xmin +
+                detectedObject.box.xmax) / 2) *
+                scale +
+              xoff;
+
+            const centerY =
+              ((detectedObject.box.ymin +
+                detectedObject.box.ymax) / 2) *
+                scale +
+              yoff;
+
+            const arrowLength = 90;
+
+
+            return (
+              <View
+                key={`forces-${objectPhysics.index}`}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              >
+                {/* Force arrow */}
+                <Svg
+                  width={DISPLAY_WIDTH}
+                  height={DISPLAY_HEIGHT}
+                  style={StyleSheet.absoluteFill}
+                >
+                  {objectPhysics.forces.map((force, forceIndex) => {
+
+                    let endY = centerY;
+                    let label = "";
+                    let arrowPoints = "";
+
+                    if (force.direction === "down") {
+                      endY = centerY + arrowLength;
+
+                      arrowPoints = `
+                        ${centerX},${endY}
+                        ${centerX - 6},${endY - 10}
+                        ${centerX + 6},${endY - 10}
+                      `;
+                    }
+
+                    else if (force.direction === "up") {
+                      endY = centerY - arrowLength;
+
+                      arrowPoints = `
+                        ${centerX},${endY}
+                        ${centerX - 6},${endY + 10}
+                        ${centerX + 6},${endY + 10}
+                      `;
+                    }
+                    
+                    /*
+                    if (force.type === "gravity") {
+                      label = "Fg";
+                    }
+
+                    else if (force.type === "normal") {
+                      label = "Fn";
+                    }
+                    */
+
+                    label = force.id
+
+                    return (
+                      <Fragment key={forceIndex}>
+
+                        <Line
+                          x1={centerX}
+                          y1={centerY}
+                          x2={centerX}
+                          y2={endY}
+                          stroke="#007AFF"
+                          strokeWidth={3}
+                        />
+
+                        <Polygon
+                          points={arrowPoints}
+                          fill="#007AFF"
+                        />
+
+                        <SvgText
+                          x={centerX + 8}
+                          y={endY}
+                          fill="#007AFF"
+                          fontSize="15"
+                          fontWeight="bold"
+                        >
+                          {label}
+                        </SvgText>
+
+                      </Fragment>
+                    );
+                  })}
+                </Svg>
+
+                {/* Debugging marker */}
+                <View
+                  style={[
+                    styles.forceOrigin,
+                    {
+                      left: centerX - 5,
+                      top: centerY - 5,
+                    },
+                  ]}
+                />
+              </View>
+
+            );
+
+          })}
+
       </View>
 
       <View style={styles.visControls}>
@@ -116,7 +266,7 @@ export default function ResultScreen() {
         {detectedObjects.map((object, index) => (
           <View key={index} style={styles.objectRow}>
             <Text style={styles.objectLabel}>
-              {object.label /*object {index+1}*/} 
+              {object.label} 
             </Text>
 
             <Text style={styles.confidence}>
@@ -148,10 +298,10 @@ const styles = StyleSheet.create({
   },
 
   imageContainer: {
-  width: DISPLAY_WIDTH,
-  height: DISPLAY_HEIGHT,
-  position: "relative",
-},
+    width: DISPLAY_WIDTH,
+    height: DISPLAY_HEIGHT,
+    position: "relative",
+  },
 
   visControls: {
     marginTop: 20,
@@ -170,6 +320,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingHorizontal: 4,
     paddingVertical: 2,
+  },
+
+  forceOrigin: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#007AFF",
   },
 
   sectionTitle: {
@@ -204,7 +362,6 @@ const styles = StyleSheet.create({
   image: {
     width: DISPLAY_WIDTH,
     height: DISPLAY_HEIGHT,
-    borderRadius: 20,
     resizeMode: "contain", //shrink the entire photo until it fits in the container
   },
 
