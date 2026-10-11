@@ -40,6 +40,18 @@ def analyze_physics(scene, detections):
   # 2. process relationships and update each physics entry 
   for object in scene.objects:
 
+    print("\n=== SCENE RELATIONSHIPS ===")
+
+    for obj in scene.objects:
+      print(
+          f"Object {obj.detection_index}: {obj.name}"
+      )
+
+      for relationship in obj.relationships:
+          print(
+              f"  {relationship.type} -> {relationship.object}"
+          )
+
     for relationship in object.relationships:
       acting_obj = relationship.object
 

@@ -66,146 +66,63 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   image_base64 = base64.b64encode(resized_image).decode("utf-8")
 
   prompt = f"""
-  You are analyzing a physical scene for a physics education app.
+  You are analyzing an image for a physics education app.
 
-  An object detector found these objects:
+  YOLO detected these objects (indices correspond to the detection list):
+  {json.dumps(detections, separators=(",", ":"))}
 
-  {json.dumps(detections, indent=2)}
+  TASK:
+  For EVERY detected object, identify:
+  - detection_index: its original detection index
+  - name: a specific everyday object name
+  - relationships: visible physical relationships with other objects or surfaces
 
-  Use the full image to:
-  1. Identify what each detected object actually is.
-  2. Identify visible physical relationships between objects and their surroundings.
+  ALLOWED RELATIONSHIPS:
+  - supported_by: resting, sitting, standing, or being held up by a surface/object
+  - hanging_from: suspended by a string, rope, hook, etc.
+  - attached_to: physically connected but not suspended
+  - touching: in contact without clear support
 
-  You are performing SCENE UNDERSTANDING ONLY.
-  Do NOT infer forces or physics concepts.
+  IMPORTANT — SUPPORT DETECTION:
+  - Check whether EACH object is supported, including people.
+  - Seated person -> supported_by chair/seat.
+  - Standing person -> supported_by floor/ground.
+  - Person lying on bed -> supported_by bed.
+  - Person sitting in a chair while touching a table -> BOTH
+    supported_by chair AND touching table.
+  - Support may be partially hidden. Infer it only when posture
+    and surroundings provide clear evidence.
+  - If support is evident but the surface is unidentifiable,
+    use "unknown surface".
+  - Supporting surfaces do NOT need to be detected by YOLO.
+  - Use supported_by instead of touching when an object rests on a surface.
+  - Do not assume every object is supported.
 
-  For EVERY detected object, return:
-  - detection_index: its index in the detection list
-  - name: a clear, specific everyday name for the object
-  - relationships: all clearly visible physical relationships involving that object
+  RULES:
+  - Include all clearly identifiable relationships for each object.
+  - Objects may have multiple relationships.
+  - Report relationships in the observed direction only; do not
+    automatically create reverse relationships.
+  - Use the image, not just YOLO labels, to identify objects.
+  - Do not invent unsupported relationships.
+  - Use [] when no relationship can be determined.
+  - Do NOT infer forces, motion, or other physics concepts.
 
-  For each detected object, carefully check:
-  1. Is it resting on or sitting on another object or surface?
-  2. Is it hanging from another object?
-  3. Is it physically attached to another object?
-  4. Is it touching another object?
-
-  Pay special attention to relationships BETWEEN detected objects.
-  Do not only check relationships between detected objects and the
-  background or environment.
-
-  Allowed relationship types:
-
-  - supported_by:
-    The object is visibly resting on, sitting on, or being held up by
-    another object or surface beneath it.
-
-    Examples:
-    - book resting on table → book supported_by table
-    - cat sitting on chair → cat supported_by chair
-    - box resting on shelf → box supported_by shelf
-    - chair standing on floor → chair supported_by floor
-
-  - hanging_from:
-    The object is visibly suspended from another object.
-
-    Examples:
-    - lamp hanging from cord → lamp hanging_from cord
-    - mass hanging from string → mass hanging_from string
-
-  - attached_to:
-    The object is visibly physically connected to another object,
-    but is not hanging from it.
-
-  - touching:
-    The object is visibly in physical contact with another object,
-    but neither object is clearly resting on or supported by the other.
-
-  SUPPORT DETECTION:
-
-  For every detected object, examine whether it is visibly
-  resting on a surface.
-
-  If the object is resting on a surface:
-  - Use the relationship type "supported_by".
-  - If the supporting object is identifiable, name it.
-  - If the supporting object cannot be identified, use
-    "unknown surface" as the supporting object.
-
-  Examples:
-
-  A bottle resting on a floor:
+  Return ONLY valid JSON in this exact format:
   {{
-      "type": "supported_by",
-      "object": "floor"
+    "objects": [
+      {{
+        "detection_index": 0,
+        "name": "person",
+        "relationships": [
+          {{"type": "supported_by", "object": "chair"}},
+          {{"type": "touching", "object": "table"}}
+        ]
+      }}
+    ]
   }}
 
-  A box resting on an unidentified horizontal surface:
-  {{
-      "type": "supported_by",
-      "object": "unknown surface"
-  }}
-
-  Do not require the supporting surface to be detected by YOLO.
-
-  Do not assume every object is supported. Objects may be
-  hanging, falling, or otherwise unsupported.  
-
-  IMPORTANT RULES:
-
-  - If object A is visibly resting on object B, report:
-    A supported_by B
-
-  - Do NOT create a reverse relationship just because A has a
-    relationship with B. Report only the directly observed relationship.
-
-  - If an object is resting on another object or surface, use
-    "supported_by", NOT "touching".
-
-  - An object may have more than one relationship if multiple
-    relationships are clearly visible.
-
-  - If no allowed relationship is clearly visible for an object,
-    return an empty relationships list.
-
-  - Use the detected objects as spatial hints, but use the full image
-    to determine their actual identities and relationships.
-
-  - Do not invent objects or relationships that are not visually
-    supported by the image.
-
-  - Do NOT infer or mention:
-    gravity,
-    normal forces,
-    tension forces,
-    friction,
-    force direction,
-    force magnitude,
-    Newton's laws,
-    equilibrium,
-    velocity,
-    acceleration,
-    or any other physics conclusions.
-
-  Return ONLY valid JSON.
-  Do not include Markdown, explanations, or text outside the JSON.
-
-  Use exactly this structure:
-
-  {{
-      "objects": [
-          {{
-              "detection_index": 0,
-              "name": "book",
-              "relationships": [
-                  {{
-                      "type": "supported_by",
-                      "object": "wooden table"
-                  }}
-              ]
-          }}
-      ]
-  }}
+  Include one entry for EVERY detected object, using its original index.
   """
   
   request_data = {
