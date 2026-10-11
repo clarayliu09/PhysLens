@@ -46,6 +46,25 @@ export default function ResultScreen() {
   const physicsResults: ObjectPhysics[] = JSON.parse(physics);
   const numObjects = detectedObjects.length;
 
+  const getObjectName = (index: number) => {
+    const label = detectedObjects[index].label;
+
+    // Find all objects with the same label
+    const matchingIndices = detectedObjects
+      .map((object, i) => object.label === label ? i : -1)
+      .filter(i => i !== -1);
+
+    // No numbering needed for unique objects
+    if (matchingIndices.length === 1) {
+      return label;
+    }
+
+    // Number duplicates starting from 1
+    const number = matchingIndices.indexOf(index) + 1;
+
+    return `${label} ${number}`;
+  };
+
   const [visibleObjects, setVisibleObjects] = useState<
     Record<number, boolean>
   >({});
@@ -200,11 +219,8 @@ export default function ResultScreen() {
   const w = imageSize.width * scale;
   const h = imageSize.height * scale;
 
-  // calculate offsets because resizeMode preserves the original image's ratio
-  //    only one side (length or width) reaches the set DISPLAY_WIDTH/DISPLAY_HEIGHT values
-  //    actual x and y values of the photo begin at xoff and yoff
-  const xoff = (DISPLAY_WIDTH - w) / 2; // display_width - w --> unused horiz space
-  const yoff = (DISPLAY_HEIGHT - h) /2;
+  const xoff = 0;
+  const yoff = 0;
 
   const OBJECT_COLORS = [
     "#FF453A", // 0: red
@@ -247,10 +263,14 @@ export default function ResultScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.imageContainer}>
+      <View style={[styles.imageContainer, {width: w || DISPLAY_WIDTH, height: h || DISPLAY_HEIGHT,},]}>
         <Image 
           source={{ uri: imageUri }}
-          style = {styles.image}
+          style = {{
+            width: w || DISPLAY_WIDTH,
+            height: h || DISPLAY_HEIGHT,
+          }}
+          resizeMode = "contain"
         ></Image>
 
         {detectedObjects.map((object, index) => {
@@ -280,7 +300,7 @@ export default function ResultScreen() {
               ]}
             >
               <Text style={[styles.boxLabel, {backgroundColor: getObjectColor(index)}]}>
-                {object.label /*object {index+1}*/}
+                {getObjectName(index) /*object {index+1}*/}
               </Text>
             </View>
           );
@@ -324,8 +344,8 @@ export default function ResultScreen() {
               >
                 {/* Force arrow */}
                 <Svg
-                  width={DISPLAY_WIDTH}
-                  height={DISPLAY_HEIGHT}
+                  width={w}
+                  height={h}
                   style={StyleSheet.absoluteFill}
                 >
                   {objectPhysics.forces.filter(force => isForceVisible(objectPhysics.index, force.id)).map((force, forceIndex) => {
@@ -467,7 +487,7 @@ export default function ResultScreen() {
                   onPress={() => toggleExpanded(index)}
                 >
                   <Text style={styles.cardObjectName}>
-                    {object.label}
+                    {getObjectName(index)}
                   </Text>
 
                   <Text style={styles.cardConfidence}>
@@ -581,7 +601,7 @@ export default function ResultScreen() {
             />
 
             <Text style={styles.hiddenObjectName}>
-              {object.label}
+              {getObjectName(index)}
             </Text>
 
             <Text style={styles.cardConfidence}>
@@ -627,9 +647,13 @@ const styles = StyleSheet.create({
   },
 
   imageContainer: {
-    width: DISPLAY_WIDTH,
-    height: DISPLAY_HEIGHT,
     position: "relative",
+    marginTop: 40,
+  },
+
+  visControls: {
+    width: "100%",
+    gap: 12,
   },
 
   showMoreButton: {
@@ -665,11 +689,6 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "500",
-  },
-
-  visControls: {
-    width: "100%",
-    gap: 12,
   },
 
   objectCard: {
