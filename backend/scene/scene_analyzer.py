@@ -1,6 +1,7 @@
 import base64
 import json
 import urllib.request
+import urllib.error
 
 from pydantic import BaseModel, Field, AliasChoices
 from typing import Literal
@@ -210,13 +211,19 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   request_data = {
     "model": MODEL,
     "messages": [
-      {
-        "role": "user",
-        "content": prompt,
-        "images": [image_base64]
-      }
+        {
+            "role": "user",
+            "content": prompt,
+            "images": [image_base64]
+        }
     ],
-    "stream": False
+    "stream": False,
+    "format": "json",
+    "options": {
+        "temperature": 0,
+        "num_ctx": 8192, #increases available context window to 8192 tokens
+        "num_predict": 2048
+    }
   }
 
   request = urllib.request.Request(
@@ -226,12 +233,37 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
     method="POST"
   )
 
-  with urllib.request.urlopen(request) as response:
-    result = json.loads(response.read().decode("utf-8"))
+  try:
+    with urllib.request.urlopen(request) as response:
+      result = json.loads(response.read())
+
+  except urllib.error.HTTPError as e:
+    error_body = e.read().decode("utf-8", errors="replace")
+
+    print("\n=== OLLAMA ERROR ===")
+    print("Status:", e.code)
+    print("URL:", e.url)
+    print("Message:", error_body)
+    print("==================================\n")
+
+    raise 
 
   model_output = result["message"]["content"]
 
-  scene_data = json.loads(model_output)
+  print("\n=== RAW QWEN OUTPUT ===")
+  print(repr(model_output))
+  print("\n=== OUTPUT LENGTH ===")
+  print(len(model_output))
+
+  try:
+    scene_data = json.loads(model_output)
+
+  except json.JSONDecodeError as e:
+    print("\n=== QWEN JSON PARSING FAILED ===")
+    print("Error:", e)
+    print("Raw output:", repr(model_output))
+
+    scene_data = {"objects": []}
 
   return SceneAnalysis.model_validate(scene_data) 
   # SceneAnalysis.model_validate(scene_data) creates a SceneAnalysis

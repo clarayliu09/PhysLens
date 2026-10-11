@@ -50,6 +50,29 @@ export default function ResultScreen() {
     Record<number, boolean>
   >({});
 
+  const [selectedObjectIndices, setSelectedObjectIndices] = useState<number[]>([0, 1, 2]);
+
+  const [showAllObjects, setShowAllObjects] = useState(false);
+
+  useEffect(() => {
+    const firstThree = detectedObjects
+      .slice(0, 3)
+      .map((_, index) => index);
+
+    setSelectedObjectIndices(firstThree);
+
+    const initialVisibility: Record<number, boolean> = {};
+
+    firstThree.forEach(index => {
+      initialVisibility[index] = true;
+    });
+
+    setVisibleObjects(initialVisibility);
+    setVisibleForces({});
+    setExpandedObjects({});
+    setShowAllObjects(false);
+  }, [objects]);
+
   const [visibleForces, setVisibleForces] = useState<
     Record<string, boolean>
   >({});
@@ -64,26 +87,102 @@ export default function ResultScreen() {
       [index]: !(prev[index] === true),
     }));
   };
-
+  
+  // Whether the object is displayed on the image
   const isObjectVisible = (index: number) =>
-    visibleObjects[index] !== false;
+    visibleObjects[index] === true;
 
-  const isForceVisible = (id: string) =>
-    visibleForces[id] !== false;
+  const isForceVisible = (index: number, id: string) =>
+    visibleForces[`${index}:${id}`] !== false;
 
-  const toggleObject = (index: number) => {
-    setVisibleObjects(prev => ({
-      ...prev,
-      [index]: !isObjectVisible(index),
-    }));
-  };
+  const toggleForce = (index: number, id: string) => {
+    const key = `${index}:${id}`;
 
-  const toggleForce = (id: string) => {
     setVisibleForces(prev => ({
       ...prev,
-      [id]: !isForceVisible(id),
+      [key]: !(prev[key] !== false),
     }));
   };
+
+  // Checkbox: show/hide object and automatically enable its forces
+  const toggleObject = (index: number) => {
+    const nextVisible = !isObjectVisible(index);
+
+    setVisibleObjects(prev => ({
+      ...prev,
+      [index]: nextVisible,
+    }));
+
+    // When the object is checked, reset all its forces to ON
+    if (nextVisible) {
+      setVisibleForces(prev => {
+        const updated = { ...prev };
+
+        const objectPhysics = physicsResults.find(
+          p => p.index === index
+        );
+
+        objectPhysics?.forces.forEach(force => {
+          updated[`${index}:${force.id}`] = true;
+        });
+
+        return updated;
+      });
+    }
+  };
+
+  // Add an object to the selected list, checked by default
+  const addObject = (index: number) => {
+    setSelectedObjectIndices(prev =>
+      prev.includes(index) ? prev : [...prev, index]
+    );
+
+    // Automatically check the object
+    setVisibleObjects(prev => ({
+      ...prev,
+      [index]: true,
+    }));
+
+    // Automatically enable all its forces
+    setVisibleForces(prev => {
+      const updated = { ...prev };
+
+      const objectPhysics = physicsResults.find(
+        p => p.index === index
+      );
+
+      objectPhysics?.forces.forEach(force => {
+        updated[`${index}:${force.id}`] = true;
+      });
+
+      return updated;
+    });
+  };
+
+  // Remove an object from the selected list
+  const removeObject = (index: number) => {
+    setSelectedObjectIndices(prev =>
+      prev.filter(i => i !== index)
+    );
+
+    setVisibleObjects(prev => ({
+      ...prev,
+      [index]: false,
+    }));
+  };
+
+  // Objects in the selected controls list
+  const selectedObjects = selectedObjectIndices
+    .filter(index => detectedObjects[index] !== undefined)
+    .map(index => ({
+      object: detectedObjects[index],
+      index,
+    }));
+
+  // Objects available to add
+  const hiddenObjects = detectedObjects
+    .map((object, index) => ({ object, index }))
+    .filter(({ index }) => !selectedObjectIndices.includes(index));
 
   const [imageSize, setImageSize] = useState({width:0, height:0});
 
@@ -229,13 +328,13 @@ export default function ResultScreen() {
                   height={DISPLAY_HEIGHT}
                   style={StyleSheet.absoluteFill}
                 >
-                  {objectPhysics.forces.filter(force => isForceVisible(force.id)).map((force, forceIndex) => {
+                  {objectPhysics.forces.filter(force => isForceVisible(objectPhysics.index, force.id)).map((force, forceIndex) => {
                     // force-arrow rendering will only process enabled forces
 
                     //all forces on this object pointing in the same direction
                     const sameDirectionForces = objectPhysics.forces.filter(
                       (f) =>
-                        isForceVisible(f.id) &&
+                        isForceVisible(objectPhysics.index, f.id) &&
                         f.direction === force.direction
                     );
 
@@ -343,7 +442,7 @@ export default function ResultScreen() {
           Detected Objects ({numObjects})
         </Text>
 
-        {detectedObjects.map((object, index) => {
+        {selectedObjects.map(({object, index}) => {
           const checked = isObjectVisible(index);
           const expanded = expandedObjects[index] === true;
           const objectColor = getObjectColor(index);
@@ -381,6 +480,18 @@ export default function ResultScreen() {
                     color="#A9B8C9"
                   />
                 </Pressable>
+
+                <Pressable
+                  onPress={() => removeObject(index)}
+                  hitSlop={10}
+                  accessibilityLabel={`Remove ${object.label} from selected objects`}
+                >
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={24}
+                    color="#8895A7"
+                  />
+                </Pressable>
               </View>
 
               {checked && expanded && (
@@ -393,17 +504,17 @@ export default function ResultScreen() {
                     <Pressable
                       key={force.id}
                       style={styles.forceRow}
-                      onPress={() => toggleForce(force.id)}
+                      onPress={() => toggleForce(index, force.id)}
                     >
                       <Ionicons
                         name={
-                          isForceVisible(force.id)
+                          isForceVisible(index, force.id)
                             ? "checkbox"
                             : "square-outline"
                         }
                         size={21}
                         color={
-                          isForceVisible(force.id)
+                          isForceVisible(index, force.id)
                             ? objectColor
                             : "#8895A7"
                         }
@@ -433,8 +544,57 @@ export default function ResultScreen() {
                 </View>
               )}
             </View>
-          );
+           );
         })}
+
+        {/* Show/hide the list of unselected objects */}
+        {hiddenObjects.length > 0 && (
+          <Pressable
+            style={styles.showMoreButton}
+            onPress={() => setShowAllObjects(prev => !prev)}
+          >
+            <Ionicons
+              name={showAllObjects ? "chevron-up" : "chevron-down"}
+              size={20}
+              color="#70B2FF"
+            />
+
+            <Text style={styles.showMoreText}>
+              {showAllObjects
+                ? "Hide other objects"
+                : `Show other objects (${hiddenObjects.length})`}
+            </Text>
+          </Pressable>
+        )}
+
+        {/* List of currently hidden objects */}
+        {showAllObjects && hiddenObjects.map(({ object, index }) => (
+          <Pressable
+            key={index}
+            style={styles.hiddenObjectRow}
+            onPress={() => addObject(index)}
+          >
+            <Ionicons
+              name="square-outline"
+              size={23}
+              color="#8895A7"
+            />
+
+            <Text style={styles.hiddenObjectName}>
+              {object.label}
+            </Text>
+
+            <Text style={styles.cardConfidence}>
+              {Math.round(object.confidence * 100)}%
+            </Text>
+
+            <Ionicons
+              name="add"
+              size={20}
+              color="#70B2FF"
+            />
+          </Pressable>
+        ))}
       </View>
 
 
@@ -451,13 +611,11 @@ export default function ResultScreen() {
   );
 } 
 
-
-
 // <---------------------STYLING-------------------------->
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#07111F", //cream: C7C3BD",
+    backgroundColor: "#07111F", //cream: C7C3BD
   },
 
   scrollContent: {
@@ -468,11 +626,45 @@ const styles = StyleSheet.create({
     gap: 24,
   },
 
-
   imageContainer: {
     width: DISPLAY_WIDTH,
     height: DISPLAY_HEIGHT,
     position: "relative",
+  },
+
+  showMoreButton: {
+    width: "100%",
+    backgroundColor: "#172638",
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  showMoreText: {
+    color: "#70B2FF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  hiddenObjectRow: {
+    width: "100%",
+    backgroundColor: "#172638",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  hiddenObjectName: {
+    flex: 1,
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
   },
 
   visControls: {
@@ -534,7 +726,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
 
-    forceList: {
+  forceList: {
     marginTop: 16,
     paddingTop: 14,
     borderTopWidth: 1,
@@ -601,7 +793,7 @@ const styles = StyleSheet.create({
   image: {
     width: DISPLAY_WIDTH,
     height: DISPLAY_HEIGHT,
-    resizeMode: "contain", 
+    resizeMode: "contain",
   },
 
   primaryButton: {
@@ -611,15 +803,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 0,
-    display: 'flex',
-    flexDirection: 'row',
+    display: "flex",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#D00003",
     gap: 20,
     shadowColor: "#0037AF",
     shadowOffset: {
       width: 0,
-      height:5,
+      height: 5,
     },
     shadowOpacity: 0.5,
     shadowRadius: 10,
@@ -630,5 +822,5 @@ const styles = StyleSheet.create({
     color: "white",
     textAlign: "center",
   },
-
 });
+
