@@ -34,6 +34,13 @@ async def detect(file: UploadFile = File(...)):
     #run scene analyzer
     scene = analyze_scene(image_bytes, detections)
 
+    print("\n=== YOLO DETECTIONS ===")
+    print(detections)
+
+    print("\n=== QWEN SCENE ANALYSIS ===")
+    print(scene.model_dump())
+
+
     #end = time.perf_counter()
 
     #print("\nSCENE ANALYSIS TIME:")
@@ -46,7 +53,10 @@ async def detect(file: UploadFile = File(...)):
             # change the label of objects in YOLO's output to the more accurate one provided by Qwen model
             detections[i]["label"] = object.name
 
-    physics_results = analyze_physics(scene)
+    physics_results = analyze_physics(scene, detections)
+
+    print("\n=== PHYSICS RESULTS ===")
+    print(physics_results)
 
     #return results to the app as JSON
     return {

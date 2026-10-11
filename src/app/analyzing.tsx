@@ -128,7 +128,7 @@ export default function AnalyzingScreen() {
         }
 
         const remaining = 0.9 - current;
-        return current + remaining * 0.15;
+        return current + remaining * 0.07;
       });
     }, 300);
 

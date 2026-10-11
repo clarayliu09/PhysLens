@@ -266,7 +266,7 @@ export default function ResultScreen() {
                       label = "Ff";
                     }
 
-                    label = force.id // overrides it for now (debugging purposes)
+                    //label = force.id // overrides it for now (debugging purposes)
 
                     if (force.direction === "down") {
                       endY = centerY + arrowLength;
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     alignItems: "center",
-    paddingTop: 0,
+    paddingTop: 40,
     paddingHorizontal: 20,
     paddingBottom: 60,
     gap: 24,

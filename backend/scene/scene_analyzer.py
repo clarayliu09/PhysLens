@@ -9,7 +9,7 @@ from io import BytesIO
 
 MODEL = "qwen3-vl:4b-instruct"
 
-# DEFINING OUR OWN DATA TYPES
+# DEFINING OWN DATA TYPES
 class Relationship(BaseModel):
   type: Literal[ # Literal restricts options to those listed
     "supported_by",
@@ -17,7 +17,7 @@ class Relationship(BaseModel):
     "attached_to",
     "touching"
   ]
-  object: str
+  object: str #can be an unknown object
 
 
 class SceneObject(BaseModel):
@@ -119,6 +119,36 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   - touching:
     The object is visibly in physical contact with another object,
     but neither object is clearly resting on or supported by the other.
+
+  SUPPORT DETECTION:
+
+  For every detected object, examine whether it is visibly
+  resting on a surface.
+
+  If the object is resting on a surface:
+  - Use the relationship type "supported_by".
+  - If the supporting object is identifiable, name it.
+  - If the supporting object cannot be identified, use
+    "unknown surface" as the supporting object.
+
+  Examples:
+
+  A bottle resting on a floor:
+  {{
+      "type": "supported_by",
+      "object": "floor"
+  }}
+
+  A box resting on an unidentified horizontal surface:
+  {{
+      "type": "supported_by",
+      "object": "unknown surface"
+  }}
+
+  Do not require the supporting surface to be detected by YOLO.
+
+  Do not assume every object is supported. Objects may be
+  hanging, falling, or otherwise unsupported.  
 
   IMPORTANT RULES:
 
