@@ -33,6 +33,7 @@ type ObjectPhysics = {
 
 const DISPLAY_HEIGHT = 450;
 const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
+const FORCE_PADDING = 110;
 
 export default function ResultScreen() {
 
@@ -333,6 +334,9 @@ export default function ResultScreen() {
                 scale +
               yoff;
 
+            const svgCenterX = centerX + FORCE_PADDING;
+            const svgCenterY = centerY + FORCE_PADDING;
+
             const arrowLength = 90;
 
 
@@ -344,9 +348,13 @@ export default function ResultScreen() {
               >
                 {/* Force arrow */}
                 <Svg
-                  width={w}
-                  height={h}
-                  style={StyleSheet.absoluteFill}
+                  width={w + FORCE_PADDING * 2}
+                  height={h + FORCE_PADDING * 2}
+                  style={{
+                    position: "absolute",
+                    left: -FORCE_PADDING,
+                    top: -FORCE_PADDING,
+                  }}
                 >
                   {objectPhysics.forces.filter(force => isForceVisible(objectPhysics.index, force.id)).map((force, forceIndex) => {
                     // force-arrow rendering will only process enabled forces
@@ -366,11 +374,11 @@ export default function ResultScreen() {
                     // calc horiz offset
                     const spacing = 18;
                     const offX = (directionIndex - (sameDirectionForces.length-1)/2) * spacing
-                    const startX = centerX + offX;
+                    const startX = svgCenterX + offX;
 
 
                     let endX = startX;
-                    let endY = centerY;
+                    let endY = svgCenterY;
                     let label = "";
                     let arrowPoints = "";
 
@@ -388,7 +396,7 @@ export default function ResultScreen() {
                     //label = force.id // overrides it for now (debugging purposes)
 
                     if (force.direction === "down") {
-                      endY = centerY + arrowLength;
+                      endY = svgCenterY + arrowLength;
 
                       arrowPoints = `
                         ${endX},${endY}
@@ -398,7 +406,7 @@ export default function ResultScreen() {
                     }
 
                     else if (force.direction === "up") {
-                      endY = centerY - arrowLength;
+                      endY = svgCenterY - arrowLength;
 
                       arrowPoints = `
                         ${endX},${endY}
@@ -412,7 +420,7 @@ export default function ResultScreen() {
 
                         <Line
                           x1={startX}
-                          y1={centerY}
+                          y1={svgCenterY}
                           x2={startX}
                           y2={endY}
                           stroke={objectColor}
@@ -648,7 +656,9 @@ const styles = StyleSheet.create({
 
   imageContainer: {
     position: "relative",
+    overflow: "visible",
     marginTop: 40,
+    marginBottom: 40,
   },
 
   visControls: {
