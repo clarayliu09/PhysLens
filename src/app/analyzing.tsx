@@ -4,6 +4,9 @@ import { fetch } from "expo/fetch";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated, StyleSheet, Text, View } from "react-native";
 
+import ScreenBackground from "../components/ScreenBg";
+import { COLORS } from "../constants/theme";
+
 let LOADING_TEXTS: string[] = [
   "PhysLens is identifying objects, forces and physics concepts",
   "Letting Force = mass x acceleration",
@@ -91,6 +94,7 @@ export default function AnalyzingScreen() {
 
         console.log("8. Detected objects:", data.objects);
         console.log("9. Physics results:", data.physics);
+        console.log("10. Explanations results:", data.explanations);
 
         // navigate to results screen (removes the /analyzing screen from history too)
         router.replace({
@@ -99,6 +103,7 @@ export default function AnalyzingScreen() {
             imageUri,
             objects: JSON.stringify(data.objects), //data.objects is js array, but params have to be in string form
             physics: JSON.stringify(data.physics),
+            explanations: JSON.stringify(data.explanations),
           },
         });
         
@@ -171,34 +176,36 @@ export default function AnalyzingScreen() {
   */
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground>
+      <View style={styles.container}>
 
-      <Text style={styles.title}>Analyzing scene...</Text>
+        <Text style={styles.title}>Analyzing scene...</Text>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTrack}>
-          <Animated.View
-            style={[
-              styles.progressFill,
-              {
-                width: animatedProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ["0%", "100%"],
-                }),
-              },
-            ]}
-          />
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack}>
+            <Animated.View
+              style={[
+                styles.progressFill,
+                {
+                  width: animatedProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ["0%", "100%"],
+                  }),
+                },
+              ]}
+            />
+          </View>
+
+          <Text style={styles.progressText}>
+            {Math.round(progress * 100)}%
+          </Text>
         </View>
 
-        <Text style={styles.progressText}>
-          {Math.round(progress * 100)}%
+        <Text style={styles.subtitle}>
+          {loadingText}
         </Text>
       </View>
-
-      <Text style={styles.subtitle}>
-        {loadingText}
-      </Text>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -207,13 +214,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#07111F", //cream: #C7C3BD
+    backgroundColor: "transparent",
   },
 
   title: {
     fontSize: 40,
     fontWeight: "700",
-    color: "white",
+    color: COLORS.text,
     marginBottom: 10,
   },
 
@@ -221,7 +228,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     margin: 16,
     textAlign: "center",
-    color: "white",
+    color: COLORS.text,
   },
 
   progressContainer: {
@@ -232,20 +239,20 @@ const styles = StyleSheet.create({
 
   progressTrack: {
     width: "100%",
-    height: 8,
-    backgroundColor: "#263241",
-    borderRadius: 4,
+    height: 15,
+    backgroundColor: COLORS.text,
+    borderRadius: 8,
     overflow: "hidden",
   },
 
   progressFill: {
     height: "100%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 4,
+    backgroundColor: COLORS.green,
+    borderRadius: 8,
   },
 
   progressText: {
-    color: "white",
+    color: COLORS.text,
     fontSize: 14,
     fontWeight: "600",
   },

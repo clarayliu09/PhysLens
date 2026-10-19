@@ -8,6 +8,9 @@ import Svg, {
   Text as SvgText
 } from "react-native-svg";
 
+import ScreenBackground from "../components/ScreenBg";
+import { COLORS } from "../constants/theme";
+
 type DetectedObject = {
   label: string,
   confidence: number;
@@ -30,23 +33,26 @@ type ObjectPhysics = {
   forces: Force[];
 };
 
-
 const DISPLAY_HEIGHT = 450;
 const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
 const FORCE_PADDING = 110;
 
+
 export default function ResultScreen() {
 
-  const { imageUri, objects, physics} = useLocalSearchParams<{
+  const { imageUri, objects, physics, explanations} = useLocalSearchParams<{
     imageUri: string;
     objects: string;
     physics: string;
+    explanations: string;
   }>();
 
   const detectedObjects: DetectedObject[] = JSON.parse(objects);
   const physicsResults: ObjectPhysics[] = JSON.parse(physics);
   const numObjects = detectedObjects.length;
 
+  // function that takes in the index and returns the label of an object
+  // (also makes sure objects with the same label get different names)
   const getObjectName = (index: number) => {
     const label = detectedObjects[index].label;
 
@@ -54,16 +60,19 @@ export default function ResultScreen() {
     const matchingIndices = detectedObjects
       .map((object, i) => object.label === label ? i : -1)
       .filter(i => i !== -1);
+      // .map produces a new array of same length: [0, -1, 2, -1, 4] ( -1 means that the item isn't a match )
+      // .filter results: [0, 2, 4] (these are the detection indices of the items that have the same label)
+      // matchingIndices = [0, 2, 4]
 
-    // No numbering needed for unique objects
+    // No numbering needed if the object is unique
     if (matchingIndices.length === 1) {
-      return label;
+      return label; // "vase"
     }
 
     // Number duplicates starting from 1
     const number = matchingIndices.indexOf(index) + 1;
 
-    return `${label} ${number}`;
+    return `${label} ${number}`; // eg "vase 1"
   };
 
   const [visibleObjects, setVisibleObjects] = useState<
@@ -96,7 +105,7 @@ export default function ResultScreen() {
   const [visibleForces, setVisibleForces] = useState<
     Record<string, boolean>
   >({});
-  // use "Record<number, boolean" to store whether each object is visible, indexed by detection index
+  // use "Record<string, boolean" to store whether each object is visible, indexed by detection index
 
   const [expandedObjects, setExpandedObjects] =
     useState<Record<number, boolean>>({});
@@ -263,387 +272,391 @@ export default function ResultScreen() {
 
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <View style={[styles.imageContainer, {width: w || DISPLAY_WIDTH, height: h || DISPLAY_HEIGHT,},]}>
-        <Image 
-          source={{ uri: imageUri }}
-          style = {{
-            width: w || DISPLAY_WIDTH,
-            height: h || DISPLAY_HEIGHT,
-          }}
-          resizeMode = "contain"
-        ></Image>
+    <ScreenBackground>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.imageContainer, {width: w || DISPLAY_WIDTH, height: h || DISPLAY_HEIGHT,},]}>
+          <Image 
+            source={{ uri: imageUri }}
+            style = {{
+              width: w || DISPLAY_WIDTH,
+              height: h || DISPLAY_HEIGHT,
+            }}
+            resizeMode = "contain"
+          ></Image>
 
-        {detectedObjects.map((object, index) => {
-          if (!isObjectVisible(index)) return null;
+          {detectedObjects.map((object, index) => {
+            if (!isObjectVisible(index)) return null;
 
-          const left = object.box.xmin * scale + xoff;
-          const top = object.box.ymin * scale + yoff;
+            const left = object.box.xmin * scale + xoff;
+            const top = object.box.ymin * scale + yoff;
 
-          const width =
-            (object.box.xmax - object.box.xmin) * scale;
+            const width =
+              (object.box.xmax - object.box.xmin) * scale;
 
-          const height =
-            (object.box.ymax - object.box.ymin) * scale;
-
-          return (
-            <View
-              key={index}
-              style={[
-                styles.boundingBox,
-                {
-                  left,
-                  top,
-                  width,
-                  height,
-                  borderColor: getObjectColor(index),
-                },
-              ]}
-            >
-              <Text style={[styles.boxLabel, {backgroundColor: getObjectColor(index)}]}>
-                {getObjectName(index) /*object {index+1}*/}
-              </Text>
-            </View>
-          );
-        })}
-
-        {imageSize.width > 0 && imageSize.height > 0 &&
-          physicsResults.map((objectPhysics) => {
-            if (!isObjectVisible(objectPhysics.index)) {
-              return null;
-            }
-
-            const detectedObject =
-              detectedObjects[objectPhysics.index];
-
-            const objectColor = getObjectColor(objectPhysics.index);
-
-            if (!detectedObject) {
-              return null;
-            }
-
-            const centerX =
-              ((detectedObject.box.xmin +
-                detectedObject.box.xmax) / 2) *
-                scale +
-              xoff;
-
-            const centerY =
-              ((detectedObject.box.ymin +
-                detectedObject.box.ymax) / 2) *
-                scale +
-              yoff;
-
-            const svgCenterX = centerX + FORCE_PADDING;
-            const svgCenterY = centerY + FORCE_PADDING;
-
-            const arrowLength = 90;
-
+            const height =
+              (object.box.ymax - object.box.ymin) * scale;
 
             return (
               <View
-                key={`forces-${objectPhysics.index}`}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
+                key={index}
+                style={[
+                  styles.boundingBox,
+                  {
+                    left,
+                    top,
+                    width,
+                    height,
+                    borderColor: getObjectColor(index),
+                  },
+                ]}
               >
-                {/* Force arrow */}
-                <Svg
-                  width={w + FORCE_PADDING * 2}
-                  height={h + FORCE_PADDING * 2}
-                  style={{
-                    position: "absolute",
-                    left: -FORCE_PADDING,
-                    top: -FORCE_PADDING,
-                  }}
-                >
-                  {objectPhysics.forces.filter(force => isForceVisible(objectPhysics.index, force.id)).map((force, forceIndex) => {
-                    // force-arrow rendering will only process enabled forces
-
-                    //all forces on this object pointing in the same direction
-                    const sameDirectionForces = objectPhysics.forces.filter(
-                      (f) =>
-                        isForceVisible(objectPhysics.index, f.id) &&
-                        f.direction === force.direction
-                    );
-
-                    //find which one this specific force is
-                    const directionIndex = sameDirectionForces.findIndex(
-                      (f) => f.id === force.id
-                    )
-
-                    // calc horiz offset
-                    const spacing = 18;
-                    const offX = (directionIndex - (sameDirectionForces.length-1)/2) * spacing
-                    const startX = svgCenterX + offX;
-
-
-                    let endX = startX;
-                    let endY = svgCenterY;
-                    let label = "";
-                    let arrowPoints = "";
-
-                    // short force labels
-                    if (force.type === "gravity") {
-                      label = "Fg";
-                    } else if (force.type === "normal") {
-                      label = "FN";
-                    } else if (force.type === "tension") {
-                      label = "FT";
-                    } else if (force.type === "friction") {
-                      label = "Ff";
-                    }
-
-                    //label = force.id // overrides it for now (debugging purposes)
-
-                    if (force.direction === "down") {
-                      endY = svgCenterY + arrowLength;
-
-                      arrowPoints = `
-                        ${endX},${endY}
-                        ${endX - 6},${endY - 10}
-                        ${endX + 6},${endY - 10}
-                      `;
-                    }
-
-                    else if (force.direction === "up") {
-                      endY = svgCenterY - arrowLength;
-
-                      arrowPoints = `
-                        ${endX},${endY}
-                        ${endX - 6},${endY + 10}
-                        ${endX + 6},${endY + 10}
-                      `;
-                    }
-
-                    return (
-                      <Fragment key={forceIndex}>
-
-                        <Line
-                          x1={startX}
-                          y1={svgCenterY}
-                          x2={startX}
-                          y2={endY}
-                          stroke={objectColor}
-                          strokeWidth={3}
-                        />
-
-                        <Polygon
-                          points={arrowPoints}
-                          fill={objectColor}
-                        />
-
-                        <SvgText
-                          x={startX + 8}
-                          y={endY}
-                          fill={objectColor}
-                          fontSize="15"
-                          fontWeight="bold"
-                        >
-                          {label}
-                        </SvgText>
-
-                      </Fragment>
-                    );
-                  })}
-                </Svg>
-
-                {/* Debugging marker */}
-                <View
-                  style={[
-                    styles.forceOrigin,
-                    {
-                      left: centerX - 5,
-                      top: centerY - 5,
-                      backgroundColor: objectColor,
-                    },
-                  ]}
-                />
+                <Text style={[styles.boxLabel, {backgroundColor: getObjectColor(index)}]}>
+                  {getObjectName(index) /*object {index+1}*/}
+                </Text>
               </View>
-
             );
           })}
 
-      </View>
+          {imageSize.width > 0 && imageSize.height > 0 &&
+            physicsResults.map((objectPhysics) => {
+              if (!isObjectVisible(objectPhysics.index)) {
+                return null;
+              }
 
-      <View style={styles.visControls}>
-        <Text style={styles.sectionTitle}>
-          Detected Objects ({numObjects})
-        </Text>
+              const detectedObject =
+                detectedObjects[objectPhysics.index];
 
-        {selectedObjects.map(({object, index}) => {
-          const checked = isObjectVisible(index);
-          const expanded = expandedObjects[index] === true;
-          const objectColor = getObjectColor(index);
+              const objectColor = getObjectColor(objectPhysics.index);
 
-          const objectPhysics = physicsResults.find(
-            p => p.index === index
-          );
+              if (!detectedObject) {
+                return null;
+              }
 
-          return (
-            <View key={index} style={styles.objectCard}>
-              <View style={styles.objectCardHeader}>
-                <Pressable onPress={() => toggleObject(index)}>
-                  <Ionicons
-                    name={checked ? "checkbox" : "square-outline"}
-                    size={26}
-                    color={checked ? objectColor : "#8895A7"}
-                  />
-                </Pressable>
+              const centerX =
+                ((detectedObject.box.xmin +
+                  detectedObject.box.xmax) / 2) *
+                  scale +
+                xoff;
 
-                <Pressable
-                  style={styles.objectCardTitle}
-                  onPress={() => toggleExpanded(index)}
+              const centerY =
+                ((detectedObject.box.ymin +
+                  detectedObject.box.ymax) / 2) *
+                  scale +
+                yoff;
+
+              const svgCenterX = centerX + FORCE_PADDING;
+              const svgCenterY = centerY + FORCE_PADDING;
+
+              const arrowLength = 90;
+
+
+              return (
+                <View
+                  key={`forces-${objectPhysics.index}`}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
                 >
-                  <Text style={styles.cardObjectName}>
-                    {getObjectName(index)}
-                  </Text>
+                  {/* Force arrow */}
+                  <Svg
+                    width={w + FORCE_PADDING * 2}
+                    height={h + FORCE_PADDING * 2}
+                    style={{
+                      position: "absolute",
+                      left: -FORCE_PADDING,
+                      top: -FORCE_PADDING,
+                    }}
+                  >
+                    {objectPhysics.forces.filter(force => isForceVisible(objectPhysics.index, force.id)).map((force, forceIndex) => {
+                      // force-arrow rendering will only process enabled forces
 
-                  <Text style={styles.cardConfidence}>
-                    {Math.round(object.confidence * 100)}%
-                  </Text>
+                      //all forces on this object pointing in the same direction
+                      const sameDirectionForces = objectPhysics.forces.filter(
+                        (f) =>
+                          isForceVisible(objectPhysics.index, f.id) &&
+                          f.direction === force.direction
+                      );
 
-                  <Ionicons
-                    name={expanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#A9B8C9"
+                      //find which one this specific force is
+                      const directionIndex = sameDirectionForces.findIndex(
+                        (f) => f.id === force.id
+                      )
+
+                      // calc horiz offset
+                      const spacing = 18;
+                      const offX = (directionIndex - (sameDirectionForces.length-1)/2) * spacing
+                      const startX = svgCenterX + offX;
+
+
+                      let endX = startX;
+                      let endY = svgCenterY;
+                      let label = "";
+                      let arrowPoints = "";
+
+                      // short force labels
+                      if (force.type === "gravity") {
+                        label = "Fg";
+                      } else if (force.type === "normal") {
+                        label = "FN";
+                      } else if (force.type === "tension") {
+                        label = "FT";
+                      } else if (force.type === "friction") {
+                        label = "Ff";
+                      }
+
+                      //label = force.id // overrides it for now (debugging purposes)
+
+                      if (force.direction === "down") {
+                        endY = svgCenterY + arrowLength;
+
+                        arrowPoints = `
+                          ${endX},${endY}
+                          ${endX - 6},${endY - 10}
+                          ${endX + 6},${endY - 10}
+                        `;
+                      }
+
+                      else if (force.direction === "up") {
+                        endY = svgCenterY - arrowLength;
+
+                        arrowPoints = `
+                          ${endX},${endY}
+                          ${endX - 6},${endY + 10}
+                          ${endX + 6},${endY + 10}
+                        `;
+                      }
+
+                      return (
+                        <Fragment key={forceIndex}>
+
+                          <Line
+                            x1={startX}
+                            y1={svgCenterY}
+                            x2={startX}
+                            y2={endY}
+                            stroke={objectColor}
+                            strokeWidth={3}
+                          />
+
+                          <Polygon
+                            points={arrowPoints}
+                            fill={objectColor}
+                          />
+
+                          <SvgText
+                            x={startX + 8}
+                            y={endY}
+                            fill={objectColor}
+                            fontSize="15"
+                            fontWeight="bold"
+                          >
+                            {label}
+                          </SvgText>
+
+                        </Fragment>
+                      );
+                    })}
+                  </Svg>
+
+                  {/* Debugging marker */}
+                  <View
+                    style={[
+                      styles.forceOrigin,
+                      {
+                        left: centerX - 5,
+                        top: centerY - 5,
+                        backgroundColor: objectColor,
+                      },
+                    ]}
                   />
-                </Pressable>
-
-                <Pressable
-                  onPress={() => removeObject(index)}
-                  hitSlop={10}
-                  accessibilityLabel={`Remove ${object.label} from selected objects`}
-                >
-                  <Ionicons
-                    name="close-circle-outline"
-                    size={24}
-                    color="#8895A7"
-                  />
-                </Pressable>
-              </View>
-
-              {checked && expanded && (
-                <View style={styles.forceList}>
-                  <Text style={styles.forceSectionTitle}>
-                    SHOW FORCES
-                  </Text>
-
-                  {(objectPhysics?.forces ?? []).map(force => (
-                    <Pressable
-                      key={force.id}
-                      style={styles.forceRow}
-                      onPress={() => toggleForce(index, force.id)}
-                    >
-                      <Ionicons
-                        name={
-                          isForceVisible(index, force.id)
-                            ? "checkbox"
-                            : "square-outline"
-                        }
-                        size={21}
-                        color={
-                          isForceVisible(index, force.id)
-                            ? objectColor
-                            : "#8895A7"
-                        }
-                      />
-
-                      <Text style={styles.forceName}>
-                        {force.type === "gravity"
-                          ? "Gravity"
-                          : `${force.type.charAt(0).toUpperCase()}${force.type.slice(1)} · ${force.id.split("_on_")[0]}`}
-                      </Text>
-
-                      <Ionicons
-                        name={
-                          force.direction === "up"
-                            ? "arrow-up"
-                            : force.direction === "down"
-                              ? "arrow-down"
-                              : force.direction === "left"
-                                ? "arrow-back"
-                                : "arrow-forward"
-                        }
-                        size={19}
-                        color={objectColor}
-                      />
-                    </Pressable>
-                  ))}
                 </View>
-              )}
-            </View>
-           );
-        })}
 
-        {/* Show/hide the list of unselected objects */}
-        {hiddenObjects.length > 0 && (
-          <Pressable
-            style={styles.showMoreButton}
-            onPress={() => setShowAllObjects(prev => !prev)}
-          >
-            <Ionicons
-              name={showAllObjects ? "chevron-up" : "chevron-down"}
-              size={20}
-              color="#70B2FF"
-            />
+              );
+            })}
 
-            <Text style={styles.showMoreText}>
-              {showAllObjects
-                ? "Hide other objects"
-                : `Show other objects (${hiddenObjects.length})`}
-            </Text>
-          </Pressable>
-        )}
+        </View>
 
-        {/* List of currently hidden objects */}
-        {showAllObjects && hiddenObjects.map(({ object, index }) => (
-          <Pressable
-            key={index}
-            style={styles.hiddenObjectRow}
-            onPress={() => addObject(index)}
-          >
-            <Ionicons
-              name="square-outline"
-              size={23}
-              color="#8895A7"
-            />
+        <View style={styles.visControls}>
+          <Text style={styles.sectionTitle}>
+            Detected Objects ({numObjects})
+          </Text>
 
-            <Text style={styles.hiddenObjectName}>
-              {getObjectName(index)}
-            </Text>
+          {selectedObjects.map(({object, index}) => {
+            const checked = isObjectVisible(index);
+            const expanded = expandedObjects[index] === true;
+            const objectColor = getObjectColor(index);
 
-            <Text style={styles.cardConfidence}>
-              {Math.round(object.confidence * 100)}%
-            </Text>
+            const objectPhysics = physicsResults.find(
+              p => p.index === index
+            );
 
-            <Ionicons
-              name="add"
-              size={20}
-              color="#70B2FF"
-            />
-          </Pressable>
-        ))}
-      </View>
+            return (
+              <View key={index} style={styles.objectCard}>
+                <View style={styles.objectCardHeader}>
+                  <Pressable onPress={() => toggleObject(index)}>
+                    <Ionicons
+                      name={checked ? "checkbox" : "square-outline"}
+                      size={26}
+                      color={checked ? objectColor : "#718475"}
+                    />
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.objectCardTitle}
+                    onPress={() => toggleExpanded(index)}
+                  >
+                    <Text style={styles.cardObjectName}>
+                      {getObjectName(index)}
+                    </Text>
+
+                    <Text style={styles.cardConfidence}>
+                      {Math.round(object.confidence * 100)}%
+                    </Text>
+
+                    <Ionicons
+                      name={expanded ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#718475"
+                    />
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => removeObject(index)}
+                    hitSlop={10}
+                    accessibilityLabel={`Remove ${object.label} from selected objects`}
+                  >
+                    <Ionicons
+                      name="close-circle-outline"
+                      size={24}
+                      color="#718475"
+                    />
+                  </Pressable>
+                </View>
+
+                {checked && expanded && (
+                  <View style={styles.forceList}>
+                    <Text style={styles.forceSectionTitle}>
+                      SHOW FORCES
+                    </Text>
+
+                    {(objectPhysics?.forces ?? []).map(force => (
+                      <Pressable
+                        key={force.id}
+                        style={styles.forceRow}
+                        onPress={() => toggleForce(index, force.id)}
+                      >
+                        <Ionicons
+                          name={
+                            isForceVisible(index, force.id)
+                              ? "checkbox"
+                              : "square-outline"
+                          }
+                          size={21}
+                          color={
+                            isForceVisible(index, force.id)
+                              ? objectColor
+                              : "#718475"
+                          }
+                        />
+
+                        <Text style={styles.forceName}>
+                          {force.type === "gravity"
+                            ? "Gravity"
+                            : `${force.type.charAt(0).toUpperCase()}${force.type.slice(1)} · ${force.id.split("_on_")[0]}`}
+                        </Text>
+
+                        <Ionicons
+                          name={
+                            force.direction === "up"
+                              ? "arrow-up"
+                              : force.direction === "down"
+                                ? "arrow-down"
+                                : force.direction === "left"
+                                  ? "arrow-back"
+                                  : "arrow-forward"
+                          }
+                          size={19}
+                          color={objectColor}
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
+          {/* Show/hide the list of unselected objects */}
+          {hiddenObjects.length > 0 && (
+            <Pressable
+              style={styles.showMoreButton}
+              onPress={() => setShowAllObjects(prev => !prev)}
+            >
+              <Ionicons
+                name={showAllObjects ? "chevron-up" : "chevron-down"}
+                size={20}
+                color="#2c6451ff"
+              />
+
+              <Text style={styles.showMoreText}>
+                {showAllObjects
+                  ? "Hide other objects"
+                  : `Show other objects (${hiddenObjects.length})`}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* List of currently hidden objects */}
+          {showAllObjects && hiddenObjects.map(({ object, index }) => (
+            <Pressable
+              key={index}
+              style={styles.hiddenObjectRow}
+              onPress={() => addObject(index)}
+            >
+              <Ionicons
+                name="square-outline"
+                size={23}
+                color="#718475"
+              />
+
+              <Text style={styles.hiddenObjectName}>
+                {getObjectName(index)}
+              </Text>
+
+              <Text style={styles.cardConfidence}>
+                {Math.round(object.confidence * 100)}%
+              </Text>
+
+              <Ionicons
+                name="add"
+                size={20}
+                color="#2c6451ff"
+              />
+            </Pressable>
+          ))}
+        </View>
 
 
-      <Pressable style={styles.primaryButton} onPress={() => router.dismissAll()}> 
-        <Ionicons
-          name="return-up-back"
-          size={30}
-          color="white"
-        />
-        <Text style={styles.primaryButtonText}>Return</Text>
-      </Pressable>   
+        <Pressable style={styles.primaryButton} onPress={() => router.dismissAll()}> 
+          <Ionicons
+            name="return-up-back"
+            size={30}
+            color="white"
+          />
+          <Text style={styles.primaryButtonText}>Return</Text>
+        </Pressable>   
 
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 } 
+
+
 
 // <---------------------STYLING-------------------------->
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#07111F", //cream: C7C3BD
+    backgroundColor: "transparent",
   },
 
   scrollContent: {
@@ -657,8 +670,8 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: "relative",
     overflow: "visible",
-    marginTop: 40,
-    marginBottom: 40,
+    marginTop: 20,
+    marginBottom: 10,
   },
 
   visControls: {
@@ -668,44 +681,56 @@ const styles = StyleSheet.create({
 
   showMoreButton: {
     width: "100%",
-    backgroundColor: "#172638",
+    backgroundColor: "#E6ECE3",
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.grid,
   },
 
   showMoreText: {
-    color: "#70B2FF",
+    color: COLORS.green,
     fontSize: 15,
     fontWeight: "600",
   },
 
   hiddenObjectRow: {
     width: "100%",
-    backgroundColor: "#172638",
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.grid,
   },
 
   hiddenObjectName: {
     flex: 1,
-    color: "white",
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: "500",
   },
 
   objectCard: {
     width: "100%",
-    backgroundColor: "#172638",
-    borderRadius: 14,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     padding: 16,
+
+    borderWidth: 1,
+    borderColor: COLORS.grid,
+
+    shadowColor: COLORS.text,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
   },
 
   objectCardHeader: {
@@ -724,13 +749,13 @@ const styles = StyleSheet.create({
   cardObjectName: {
     flex: 1,
     fontSize: 18,
-    fontWeight: "600",
-    color: "white",
+    fontWeight: "700",
+    color: COLORS.text,
   },
 
   cardConfidence: {
     fontSize: 14,
-    color: "#A9B8C9",
+    color: "#718475",
   },
 
   checkboxRow: {
@@ -740,61 +765,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 
-  boundingBox: {
-    position: "absolute",
-    borderWidth: 2,
-    borderColor: "#FF3B30",
-  },
-
-  boxLabel: {
-    alignSelf: "flex-start",
-    backgroundColor: "#FF3B30",
-    color: "white",
-    fontSize: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-
-  forceList: {
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#34465B",
-    gap: 14,
-  },
-
-  forceSectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#A9B8C9",
-    letterSpacing: 1,
-  },
-
-  forceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  forceName: {
-    flex: 1,
-    fontSize: 14,
-    color: "#E4EAF1",
-  },
-
-  forceOrigin: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#007AFF",
-  },
-
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "700",
-    color: "white",
-    marginBottom: 12,
+    letterSpacing: -0.5,
+    color: COLORS.text,
   },
 
   objectRow: {
@@ -819,6 +794,57 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
+
+  boundingBox: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "#FF3B30",
+  },
+
+  boxLabel: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FF3B30",
+    color: "white",
+    fontSize: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+
+  forceList: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.grid,
+    gap: 14,
+  },
+
+  forceSectionTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#718475",
+    letterSpacing: 1,
+  },
+
+  forceName: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+
+  forceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  forceOrigin: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#007AFF",
+  },
+
   image: {
     width: DISPLAY_WIDTH,
     height: DISPLAY_HEIGHT,
@@ -826,18 +852,17 @@ const styles = StyleSheet.create({
   },
 
   primaryButton: {
-    width: "100%",
     marginBottom: 20,
     paddingVertical: 16,
-    paddingHorizontal: 10,
+    paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 0,
-    display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#D00003",
+    justifyContent: "center",
+    backgroundColor: COLORS.green,
     gap: 20,
-    shadowColor: "#0037AF",
+    shadowColor: COLORS.text,
     shadowOffset: {
       width: 0,
       height: 5,
@@ -848,7 +873,8 @@ const styles = StyleSheet.create({
 
   primaryButtonText: {
     fontSize: 15,
-    color: "white",
+    fontWeight: "600",
+    color: COLORS.white,
     textAlign: "center",
   },
 });

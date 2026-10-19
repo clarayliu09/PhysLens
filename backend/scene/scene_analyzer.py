@@ -83,20 +83,36 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   - attached_to: physically connected but not suspended
   - touching: in contact without clear support
 
-  IMPORTANT — SUPPORT DETECTION:
-  - Check whether EACH object is supported, including people.
-  - Seated person -> supported_by chair/seat.
-  - Standing person -> supported_by floor/ground.
-  - Person lying on bed -> supported_by bed.
-  - Person sitting in a chair while touching a table -> BOTH
-    supported_by chair AND touching table.
-  - Support may be partially hidden. Infer it only when posture
-    and surroundings provide clear evidence.
-  - If support is evident but the surface is unidentifiable,
-    use "unknown surface".
-  - Supporting surfaces do NOT need to be detected by YOLO.
-  - Use supported_by instead of touching when an object rests on a surface.
-  - Do not assume every object is supported.
+  SUPPORT DETECTION (IMPORTANT):
+
+  For EVERY object, determine whether it is supported by
+  another object or surface.
+
+  Examples:
+  - Vase resting on table -> supported_by table
+  - Cup resting on desk -> supported_by desk
+  - Person sitting -> supported_by chair
+  - Person standing -> supported_by floor
+  - Chair on floor -> supported_by floor
+
+  A supporting surface may be partially hidden or outside
+  the detected bounding boxes.
+
+  If the object's position and surrounding scene strongly
+  indicate that it is resting on a surface, report supported_by
+  even when the exact contact point is obscured.
+
+  If support is evident but the supporting surface cannot
+  be identified, use "unknown surface".
+
+  A person sitting in a chair while touching a table has
+  BOTH supported_by chair AND touching table.
+
+  Use supported_by rather than touching when a surface
+  supports an object's weight.
+
+  Do not assume support if the object appears suspended,
+  falling, or its physical state is genuinely unclear.
 
   RULES:
   - Include all clearly identifiable relationships for each object.

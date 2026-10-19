@@ -1,10 +1,11 @@
-import time
+import json
 from fastapi import FastAPI, UploadFile, File
 from PIL import Image
 from io import BytesIO
 from detection.object_detector import detect_objects
 from scene.scene_analyzer import analyze_scene
 from physics.physics_engine import analyze_physics
+from physics.explanation_generator import generate_explanations
 
 #create FastAPI app
 app = FastAPI()
@@ -58,9 +59,15 @@ async def detect(file: UploadFile = File(...)):
     print("\n=== PHYSICS RESULTS ===")
     print(physics_results)
 
+    explanations = generate_explanations(scene,physics_results)
+
+    print("\n=== GENERATED EXPLANATIONS ===")
+    print(json.dumps(explanations, indent=2, ensure_ascii=False))
+
     #return results to the app as JSON
     return {
         "objects": detections,
         "scene": scene.model_dump(), #converts SceneAnalysis object to dictionary
-        "physics": physics_results
+        "physics": physics_results,
+        "explanations": explanations,
     }

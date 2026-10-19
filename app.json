@@ -4,7 +4,7 @@
     "slug": "physics_visualizer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/home-icon.png",
+    "icon": "./assets/images/icon-1.png",
     "scheme": "physicsvisualizer",
     "userInterfaceStyle": "automatic",
     "ios": {

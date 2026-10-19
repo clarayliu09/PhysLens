@@ -3,7 +3,8 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-const PRIMARY_TEXT_COLOR = "white"
+import ScreenBackground from "../components/ScreenBg";
+import { COLORS } from "../constants/theme";
 
 export default function HomeScreen() {
 
@@ -64,60 +65,62 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground>
+      <View style={styles.container}>
 
-      <Image
-        source={require("../../assets/images/home-icon.png")}
-        style={styles.icon}
-      />
-
-      <Text style={styles.title}>PhysLens</Text>
-      <Text style={styles.subtitle}>See the physics around you</Text>
-
-      {/* HOW IT WORKS */}
-      <Pressable style={styles.button} onPress={pressed}>
-        <Ionicons
-          name="information-circle-outline"
-          size={20}
-          color="white"
+        <Image
+          source={require("../../assets/images/icon-1.png")}
+          style={styles.icon}
         />
 
-        <Text style={styles.buttonText}>How it works.</Text>
-      </Pressable>
+        <Text style={styles.title}>PhysLens</Text>
+        <Text style={styles.subtitle}>See the physics around you</Text>
 
-      {/* UPLOAD BUTTON */}
-      <Pressable
-        style={styles.primaryButton}
-        onPress={pickImage}
-      >
-        <Ionicons
-          name="cloud-upload-outline"
-          size={30}
-          color="white"
-        />
+        {/* HOW IT WORKS */}
+        <Pressable style={styles.button} onPress={pressed}>
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={COLORS.text}
+          />
 
-        <Text style={styles.primaryButtonText}>
-          Upload Image/Video
-        </Text>
-      </Pressable>
+          <Text style={styles.buttonText}>How it works.</Text>
+        </Pressable>
 
-      {/* CAMERA BUTTON */}
-      <Pressable
-        style={styles.primaryButton}
-        onPress={takePhoto}
-      >
-        <Ionicons
-          name="camera-outline"
-          size={30}
-          color="white"
-        />
+        {/* UPLOAD BUTTON */}
+        <Pressable
+          style={styles.primaryButton}
+          onPress={pickImage}
+        >
+          <Ionicons
+            name="cloud-upload-outline"
+            size={30}
+            color="white"
+          />
 
-        <Text style={styles.primaryButtonText}>
-          Open Camera
-        </Text>
-      </Pressable>
+          <Text style={styles.primaryButtonText}>
+            Upload Image/Video
+          </Text>
+        </Pressable>
 
-    </View>
+        {/* CAMERA BUTTON */}
+        <Pressable
+          style={styles.primaryButton}
+          onPress={takePhoto}
+        >
+          <Ionicons
+            name="camera-outline"
+            size={30}
+            color="white"
+          />
+
+          <Text style={styles.primaryButtonText}>
+            Open Camera
+          </Text>
+        </Pressable>
+
+      </View>
+    </ScreenBackground>
   );
 }
 
@@ -126,68 +129,72 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#07111F", //cream: #C7C3BD
+    backgroundColor: "transparent",
   },
 
   icon: {
-    width: 375,
-    height: 375,
+    width: 300,
+    height: 300,
   },
 
   title: {
-    marginTop: -150,
-    fontSize: 80,
-    fontWeight: "700",
-    color: PRIMARY_TEXT_COLOR,
+    marginTop: -75,
+    fontSize: 75,
+    fontWeight: "800",
+    letterSpacing: -3,
+    color: COLORS.text,
   },
 
   subtitle: {
     fontSize: 25,
     margin: 8,
     textAlign: "center",
-    color: PRIMARY_TEXT_COLOR,
+    color: COLORS.text,
   },
 
   button: {
-    marginTop: 28,
-    paddingVertical: 12,
+    marginTop: 20,
+    paddingVertical: 13,
     paddingHorizontal: 20,
-    borderWidth: 1,
-    borderRadius: 7,
-    borderColor: "white",
+    borderWidth: 1.5,
+    borderRadius: 12,
+    borderColor: COLORS.text,
+    backgroundColor: COLORS.background,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
 
   buttonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: "white",
+    color: COLORS.text,
   },
 
   primaryButton: {
-    width: 250,
+    width: 280,
     marginTop: 40,
-    paddingVertical: 18,
+    paddingVertical: 20,
     paddingHorizontal: 24,
-    borderRadius: 10,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#D00003",
+    backgroundColor: COLORS.green,
     gap: 20,
-    shadowColor: "#0037AF",
+    shadowColor: COLORS.text,
     shadowOffset: {
       width: 0,
-      height: 5,
+      height: 8,
     },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowOpacity: 0.75,
+    shadowRadius: 12,
+    elevation: 5,
   },
 
   primaryButtonText: {
-    fontSize: 15,
-    color: PRIMARY_TEXT_COLOR,
+    fontSize: 16,
+    fontWeight: "500",
+    color: COLORS.white,
     textAlign: "center",
   },
 });

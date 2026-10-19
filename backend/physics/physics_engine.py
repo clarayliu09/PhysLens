@@ -67,36 +67,36 @@ def analyze_physics(scene, detections):
       # B (acting obj) pushes upward on A (the object whose force[] we're adding to)
       if relationship.type == "supported_by":
 
-        obj_physics["forces"].append(
-          Force(
-            type="normal",
-            direction="up", #assuming object on flat surface for now
-            id=label
-          )
-        ) 
-
-        # find B if B is in the stored physics results
-        supporting_obj_physics = next((r for r in results if r["name"] == acting_obj), None)
-
-        # Add A pushing down on B to list of forces acting on B
-        if supporting_obj_physics is not None:
-          supporting_obj_physics["forces"].append(
+          obj_physics["forces"].append(
             Force(
               type="normal",
-              direction="down",
-              id = f"{object.name}_on_{acting_obj}"
+              direction="up", #assuming object on flat surface for now
+              id=label
             )
-          )
+          ) 
+
+          # find B if B is in the stored physics results
+          supporting_obj_physics = next((r for r in results if r["name"] == acting_obj), None)
+
+          # Add A pushing down on B to list of forces acting on B
+          if supporting_obj_physics is not None:
+            supporting_obj_physics["forces"].append(
+              Force(
+                type="normal",
+                direction="down",
+                id = f"{object.name}_on_{acting_obj}"
+              )
+            )
 
       elif relationship.type == "hanging_from":
 
-        obj_physics["forces"].append(
-          Force(
-            type="tension", 
-            direction="up", 
-            id=f"{acting_obj}_on_{object.name}"
+          obj_physics["forces"].append(
+            Force(
+              type="tension", 
+              direction="up", 
+              id=f"{acting_obj}_on_{object.name}"
+            )
           )
-        )
   
 
   return results
