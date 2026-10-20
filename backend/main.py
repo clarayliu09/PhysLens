@@ -2,7 +2,7 @@ import json
 from fastapi import FastAPI, UploadFile, File
 from PIL import Image
 from io import BytesIO
-from detection.object_detector import detect_objects
+from detection.object_detector import detect_objects, remove_duplicate_detections
 from scene.scene_analyzer import analyze_scene
 from physics.physics_engine import analyze_physics
 from physics.explanation_generator import generate_explanations
@@ -30,6 +30,11 @@ async def detect(file: UploadFile = File(...)):
 
     #run object detector
     detections = detect_objects(image)
+
+    # Remove overlapping detections of the same object
+    detections = remove_duplicate_detections(detections, iou_threshold=0.5)
+    print("\n=== FILTERED YOLO DETECTIONS ===")
+    print(detections)   
 
     #start = time.perf_counter()
     #run scene analyzer
