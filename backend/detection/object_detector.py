@@ -29,7 +29,10 @@ def box_iou(box_a, box_b):
 
 
 def remove_duplicate_detections(detections, iou_threshold=0.5):
-    """Keep the highest-confidence detection among overlapping boxes of the same class."""
+    """
+    Remove duplicate detections, including overlapping objects
+    classified under different labels.
+    """
 
     sorted_detections = sorted(
         detections,
@@ -40,11 +43,20 @@ def remove_duplicate_detections(detections, iou_threshold=0.5):
     filtered = []
 
     for detection in sorted_detections:
-        duplicate = any(
-            detection["label"] == kept["label"]
-            and box_iou(detection["box"], kept["box"]) > iou_threshold
-            for kept in filtered
-        )
+        duplicate = False
+
+        for kept in filtered:
+            overlap = box_iou(detection["box"], kept["box"])
+
+            # Same class: standard duplicate removal
+            if detection["label"] == kept["label"] and overlap > iou_threshold:
+                duplicate = True
+                break
+
+            # Different classes: only suppress nearly identical boxes
+            if detection["label"] != kept["label"] and overlap > 0.85:
+                duplicate = True
+                break
 
         if not duplicate:
             filtered.append(detection)
