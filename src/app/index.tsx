@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { pickImage, takePhoto } from "../utils/imagePicker";
 
 import ScreenBackground from "../components/ScreenBg";
 import { COLORS } from "../constants/theme";
@@ -12,57 +11,6 @@ export default function HomeScreen() {
     // TODO: add popup window explaining the app
   }
 
-  // open photo library to choose image
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (!permission.granted) {
-      Alert.alert('Permission Needed', 'Allow access to media library to continue')
-      return;
-    }
-    
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false, //dont let users edit the image
-      quality: 1, // max quality
-    })
-    
-    if (!result.canceled) {
-      const imageUri = result.assets[0].uri; //address that points to location of file
-
-      // Send selected image to analyzing screen
-      router.push({
-        pathname: "/analyzing",
-        params: { imageUri },
-      });
-    }
-  }
-  
-  // opens camera
-  const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (!permission.granted) {
-      Alert.alert("Camera Permission Required", "PhysLens needs camera access to take a photo");
-      return;
-    }
-    
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-    });
-    
-    if (!result.canceled) {
-      const imageUri = result.assets[0].uri;
-
-      // Send camera image to analyzing screen; adds analyzing screen to nav history
-      router.push({
-        pathname: "/analyzing",
-        params: { imageUri },
-      });
-    }
-  }
 
   return (
     <ScreenBackground>

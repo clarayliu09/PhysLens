@@ -10,6 +10,7 @@ import Svg, {
 
 import ScreenBackground from "../components/ScreenBg";
 import { COLORS } from "../constants/theme";
+import { pickImage } from "../utils/imagePicker";
 
 type DetectedObject = {
   label: string,
@@ -674,14 +675,27 @@ export default function ResultScreen() {
           ))}
         </View>
 
-
-        <Pressable style={styles.primaryButton} onPress={() => router.dismissAll()}> 
+        <Pressable
+          style={styles.analyzeAnotherButton}
+          onPress={() => {void pickImage();}}
+        >
+          <Ionicons
+            name="cloud-upload-outline"
+            size={24}
+            color={COLORS.white}
+          />
+          <Text style={styles.analyzeAnotherButtonText}>
+            Analyze Another Image
+          </Text>
+        </Pressable>
+          
+        <Pressable style={styles.returnButton} onPress={() => router.replace("/")}> 
           <Ionicons
             name="return-up-back"
             size={30}
-            color="white"
+            color={COLORS.green}
           />
-          <Text style={styles.primaryButtonText}>Return</Text>
+          <Text style={styles.returnButtonText}>Return</Text>
         </Pressable>   
 
       </ScrollView>
@@ -709,7 +723,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingHorizontal: 20,
     paddingBottom: 60,
-    gap: 24,
+    gap: 20,
   },
 
   imageContainer: {
@@ -918,7 +932,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  primaryButton: {
+  returnButton: {
+    width: "100%",
     marginBottom: 20,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -927,22 +942,48 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.green,
+    backgroundColor: COLORS.white,
     gap: 20,
-    shadowColor: COLORS.text,
+    shadowColor: COLORS.green,
     shadowOffset: {
       width: 0,
       height: 5,
     },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
   },
 
-  primaryButtonText: {
+  returnButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.green,
+    textAlign: "center",
+  },
+
+  analyzeAnotherButton: {
+    width: "100%",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: COLORS.green,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    shadowColor: COLORS.green,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    marginTop: 10,
+  },
+
+  analyzeAnotherButtonText: {
     fontSize: 15,
     fontWeight: "600",
     color: COLORS.white,
-    textAlign: "center",
   },
 });
 
