@@ -33,6 +33,11 @@ type ObjectPhysics = {
   forces: Force[];
 };
 
+type ObjectExplanation = {
+  index: number;
+  summary: string;
+}
+
 const DISPLAY_HEIGHT = 450;
 const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
 const FORCE_PADDING = 110;
@@ -50,6 +55,18 @@ export default function ResultScreen() {
   const detectedObjects: DetectedObject[] = JSON.parse(objects);
   const physicsResults: ObjectPhysics[] = JSON.parse(physics);
   const numObjects = detectedObjects.length;
+
+  const parsedExplanations: ObjectExplanation[] = (() => {
+    try {
+      const raw = JSON.parse(typeof explanations == "string" ? explanations: "{}");
+
+      return Array.isArray(raw?.explanations)
+        ? raw.explanations
+        : [];
+    } catch {
+      return[];
+    }
+  })();
 
   // function that takes in the index and returns the label of an object
   // (also makes sure objects with the same label get different names)
@@ -80,7 +97,6 @@ export default function ResultScreen() {
   >({});
 
   const [selectedObjectIndices, setSelectedObjectIndices] = useState<number[]>([0, 1, 2]);
-
   const [showAllObjects, setShowAllObjects] = useState(false);
 
   useEffect(() => {
@@ -284,6 +300,7 @@ export default function ResultScreen() {
             resizeMode = "contain"
           ></Image>
 
+          {/* Visualization Overlays (bounding boxes, forces) */}
           {detectedObjects.map((object, index) => {
             if (!isObjectVisible(index)) return null;
 
@@ -348,7 +365,6 @@ export default function ResultScreen() {
               const svgCenterY = centerY + FORCE_PADDING;
 
               const arrowLength = 90;
-
 
               return (
                 <View
@@ -457,7 +473,7 @@ export default function ResultScreen() {
                     })}
                   </Svg>
 
-                  {/* Debugging marker */}
+                  {/* Center marker */}
                   <View
                     style={[
                       styles.forceOrigin,
@@ -479,11 +495,13 @@ export default function ResultScreen() {
           <Text style={styles.sectionTitle}>
             Detected Objects ({numObjects})
           </Text>
-
+          
+          {/*Object cards */}
           {selectedObjects.map(({object, index}) => {
             const checked = isObjectVisible(index);
             const expanded = expandedObjects[index] === true;
             const objectColor = getObjectColor(index);
+            const explanation = parsedExplanations.find((item) => item.index === index);
 
             const objectPhysics = physicsResults.find(
               p => p.index === index
@@ -532,10 +550,11 @@ export default function ResultScreen() {
                   </Pressable>
                 </View>
 
+                {/*Expanded section */}
                 {checked && expanded && (
                   <View style={styles.forceList}>
                     <Text style={styles.forceSectionTitle}>
-                      SHOW FORCES
+                      FORCES
                     </Text>
 
                     {(objectPhysics?.forces ?? []).map(force => (
@@ -579,6 +598,26 @@ export default function ResultScreen() {
                         />
                       </Pressable>
                     ))}
+
+                    {explanation?.summary ? (
+                      <View style={styles.explanationContainer}>
+                        <View style={styles.explanationHeader}>
+                          <Ionicons
+                            name="book-outline"
+                            size={17}
+                            color={COLORS.green}
+                          />
+                          <Text style={styles.explanationTitle}>
+                            Physics explanation
+                          </Text>
+                        </View>
+
+                        <Text style={styles.explanationText}>
+                          {explanation.summary}
+                        </Text>
+                      </View>
+                    ) : null}
+
                   </View>
                 )}
               </View>
@@ -652,11 +691,17 @@ export default function ResultScreen() {
 
 
 
-// <---------------------STYLING-------------------------->
+// STYLING
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "transparent",
+  },
+
+  image: {
+    width: DISPLAY_WIDTH,
+    height: DISPLAY_HEIGHT,
+    resizeMode: "contain",
   },
 
   scrollContent: {
@@ -722,7 +767,7 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
 
     borderWidth: 1,
     borderColor: COLORS.grid,
@@ -815,7 +860,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: COLORS.grid,
-    gap: 14,
+    gap: 12,
   },
 
   forceSectionTitle: {
@@ -845,10 +890,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#007AFF",
   },
 
-  image: {
-    width: DISPLAY_WIDTH,
-    height: DISPLAY_HEIGHT,
-    resizeMode: "contain",
+  explanationContainer: {
+    marginTop: 14,
+    padding: 14,
+    backgroundColor: "#F8F7F2",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#DCE4DA",
+  },
+
+  explanationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 7,
+  },
+
+  explanationTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+
+  explanationText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: COLORS.text,
   },
 
   primaryButton: {
