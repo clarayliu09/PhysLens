@@ -272,34 +272,76 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
 
   scene = SceneAnalysis.model_validate(scene_data) 
 
-  # second check for objects with no relationships
+  # Second check for accuracy
   for obj in scene.objects:
-      if obj.relationships:
+      # Already has a confirmed support or suspension
+      if any(
+          rel.type in ("supported_by", "hanging_from")
+          for rel in obj.relationships
+      ):
           continue
 
-      support_prompt = f"""
-      Look at the image and focus on detected object {obj.detection_index},
-      identified as "{obj.name}".
+      touching_objects = [
+          rel.object
+          for rel in obj.relationships
+          if rel.type == "touching"
+      ]
 
-      Its bounding box in the resized image is:
-      {json.dumps(scaled_detections[obj.detection_index]["box"])}
+      if touching_objects:
+          support_prompt = f"""
+          Analyze the image, focusing on object {obj.detection_index}
+          identified as "{obj.name}".
 
-      Determine whether this object is physically resting on a
-      surface or another object.
+          Its bounding box:
+          {json.dumps(scaled_detections[obj.detection_index]["box"])}
 
-      IMPORTANT:
-      - The supporting surface does not need to be detected by YOLO.
-      - Examine the bottom of the object and the surrounding surface.
-      - An upright bottle resting on the floor is supported by the floor.
-      - Do not assume an object is supported merely because it is upright.
-      - If the image does not provide sufficient evidence, return false.
+          The initial scene analysis identified these contacts:
+          {json.dumps(touching_objects)}
 
-      Return ONLY valid JSON:
-      {{
-          "supported": true,
-          "supporting_object": "floor"
-      }}
-      """
+          TASK:
+          Determine whether one of these contacting objects DIRECTLY
+          supports the target object's weight against gravity.
+
+          IMPORTANT:
+          - Evaluate the existing contacts before considering any other surface.
+          - A cat sitting on a chair is supported by the chair, not the floor.
+          - A bowl resting on a table is supported by the table, not the floor.
+          - Do not select the floor simply because it supports the furniture.
+          - A support must directly contact the target object.
+          - Do not infer support from bounding-box overlap alone.
+          - If none of the listed contacts clearly supports the object,
+            return supported=false.
+
+          Return ONLY JSON:
+          {{
+              "supported": true,
+              "supporting_object": "chair"
+          }}
+          """
+      else:
+          support_prompt = f"""
+          Look at the image and focus on detected object {obj.detection_index},
+          identified as "{obj.name}".
+
+          Its bounding box:
+          {json.dumps(scaled_detections[obj.detection_index]["box"])}
+
+          Determine whether this object is directly resting on
+          another object or surface.
+
+          IMPORTANT:
+          - The supporting surface does not need to be detected by YOLO.
+          - Examine the bottom of the object and its surroundings.
+          - An upright bottle resting on the floor is supported by the floor.
+          - Do not assume support merely because an object is upright.
+          - If evidence is insufficient, return supported=false.
+
+          Return ONLY JSON:
+          {{
+              "supported": true,
+              "supporting_object": "floor"
+          }}
+          """
 
       followup_request_data = {
           "model": MODEL,
@@ -338,13 +380,34 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
               supporting_object = support_data.get("supporting_object")
 
               if isinstance(supporting_object, str) and supporting_object.strip():
-                  obj.relationships.append(
-                      Relationship(
-                          type="supported_by",
-                          object=supporting_object.strip(),
-                          confidence="medium"
-                      )
-                  )
+                supporting_object = supporting_object.strip()
+
+                # When evaluating known contacts, only accept one of those contacts.
+                if touching_objects and supporting_object.lower() not in {
+                    name.lower() for name in touching_objects
+                }:
+                    print(
+                        f"Rejected support '{supporting_object}' for "
+                        f"{obj.name}: not among known contacts {touching_objects}"
+                    )
+                    continue
+
+                # Remove redundant touching relationship for the same support.
+                obj.relationships = [
+                    rel for rel in obj.relationships
+                    if not (
+                        rel.type == "touching"
+                        and rel.object.strip().lower() == supporting_object.lower()
+                    )
+                ]
+
+                obj.relationships.append(
+                    Relationship(
+                        type="supported_by",
+                        object=supporting_object,
+                        confidence="medium"
+                    )
+                )
 
       except (urllib.error.URLError, ValueError, KeyError) as e:
           print(f"Support follow-up failed for object {obj.detection_index}: {e}")
