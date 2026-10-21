@@ -8,6 +8,7 @@ import Svg, {
   Text as SvgText
 } from "react-native-svg";
 
+import LinkedExplanation from "../components/LinkedExplanation";
 import ScreenBackground from "../components/ScreenBg";
 import { COLORS } from "../constants/theme";
 import { pickImage } from "../utils/imagePicker";
@@ -613,9 +614,7 @@ export default function ResultScreen() {
                           </Text>
                         </View>
 
-                        <Text style={styles.explanationText}>
-                          {explanation.summary}
-                        </Text>
+                        <LinkedExplanation text={explanation.summary} />
                       </View>
                     ) : null}
 
