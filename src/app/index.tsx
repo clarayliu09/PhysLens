@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { pickImage, takePhoto } from "../utils/imagePicker";
 
 import ScreenBackground from "../components/ScreenBg";
@@ -7,9 +8,7 @@ import { COLORS } from "../constants/theme";
 
 export default function HomeScreen() {
 
-  function pressed() {
-    // TODO: add popup window explaining the app
-  }
+  const [showInfo, setShowInfo] = useState(false);
 
 
   return (
@@ -25,14 +24,14 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>See the physics around you</Text>
 
         {/* HOW IT WORKS */}
-        <Pressable style={styles.button} onPress={pressed}>
+        <Pressable style={styles.button} onPress={() => setShowInfo(true)}>
           <Ionicons
             name="information-circle-outline"
             size={20}
             color={COLORS.text}
           />
 
-          <Text style={styles.buttonText}>How it works.</Text>
+          <Text style={styles.buttonText}>How it works</Text>
         </Pressable>
 
         {/* UPLOAD BUTTON */}
@@ -68,6 +67,66 @@ export default function HomeScreen() {
         </Pressable>
 
       </View>
+
+      <Modal visible={showInfo} transparent animationType="fade" onRequestClose={() => setShowInfo(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+
+            {/*close button */}
+            <Pressable style={styles.modalClose} onPress={()=>setShowInfo(false)}>
+              <Ionicons name="close" size={24} color={COLORS.text}/>
+            </Pressable>
+
+            <Text style={styles.modalTitle}>How PhysLens Works</Text>
+
+            <Text style={styles.disclaimerText}>
+              DISCLAIMER: AI can make mistakes.
+            </Text>
+
+            <View style={styles.featureRow}>
+              <Ionicons name="camera-outline" size={26} color={COLORS.green} />
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>1. Capture a Scene</Text>
+                <Text style={styles.featureDescription}>
+                  Take a photo or upload an image of objects around you.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featureRow}>
+              <Ionicons name="scan-outline" size={26} color={COLORS.green} />
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>2. Detect Objects</Text>
+                <Text style={styles.featureDescription}>
+                  PhysLens uses AI to identify objects and how they interact with each other.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featureRow}>
+              <Ionicons name="git-branch-outline" size={26} color={COLORS.green} />
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>3. Visualize Forces</Text>
+                <Text style={styles.featureDescription}>
+                  Explore force diagrams showing gravity, normal forces, and other
+                  forces acting on the detected objects.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featureRow}>
+              <Ionicons name="book-outline" size={26} color={COLORS.green} />
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>4. Learn the Physics</Text>
+                <Text style={styles.featureDescription}>
+                  Read explanations and tap linked physics terms to learn more.
+                </Text>
+              </View>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
     </ScreenBackground>
   );
 }
@@ -144,5 +203,86 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: COLORS.white,
     textAlign: "center",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+
+  modalContent: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: COLORS.background,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+
+  modalClose: {
+    alignSelf: "flex-end",
+    padding: 4,
+  },
+
+  modalTitle: {
+    fontSize: 27,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+
+  disclaimerText: {
+    fontSize: 15,
+    color: COLORS.green,
+    marginBottom: 26,
+    lineHeight: 22,
+    fontStyle: "italic",
+    textAlign: "center",
+  },
+
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+    marginBottom: 22,
+  },
+
+  featureTextContainer: {
+    flex: 1,
+  },
+
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+
+  featureDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.text,
+    opacity: 0.8,
+  },
+
+  modalButton: {
+    backgroundColor: COLORS.green,
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+  modalButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
