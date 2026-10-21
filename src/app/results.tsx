@@ -244,11 +244,41 @@ export default function ResultScreen() {
     scale = Math.min(DISPLAY_WIDTH/imageSize.width, DISPLAY_HEIGHT/imageSize.height);
   }
 
+  // scaled image dimensions
   const w = imageSize.width * scale;
   const h = imageSize.height * scale;
 
   const xoff = 0;
   const yoff = 0;
+  
+  const arrowLength = 90;
+
+  // Find the lowest endpoint of any downward force arrow
+  const lowestArrowY = physicsResults.reduce((lowest, objectPhysics) => {
+    if (!isObjectVisible(objectPhysics.index)) return lowest;
+
+    const hasDownwardForce = objectPhysics.forces.some(
+      (force) =>
+        force.direction === "down" &&
+        isForceVisible(objectPhysics.index, force.id)
+    );
+
+    if (!hasDownwardForce) return lowest;
+
+    const object = detectedObjects[objectPhysics.index];
+    if (!object) return lowest;
+
+    const centerY =
+      ((object.box.ymin + object.box.ymax) / 2) * scale + yoff;
+
+    return Math.max(lowest, centerY + arrowLength);
+  }, h);
+
+  // Space needed below the image for arrows and labels
+  const bottomArrowOverflow = Math.max(0, lowestArrowY - h);
+
+  // Extra room between arrows and the next section
+  const bottomSpacing = bottomArrowOverflow + 24;
 
   const OBJECT_COLORS = [
     "#FF453A", // 0: red
@@ -292,7 +322,7 @@ export default function ResultScreen() {
   return (
     <ScreenBackground>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.imageContainer, {width: w || DISPLAY_WIDTH, height: h || DISPLAY_HEIGHT,},]}>
+        <View style={[styles.imageContainer, {width: w || DISPLAY_WIDTH, height: h || DISPLAY_HEIGHT, marginBottom: bottomSpacing,},]}>
           <Image 
             source={{ uri: imageUri }}
             style = {{
@@ -366,8 +396,6 @@ export default function ResultScreen() {
               const svgCenterX = centerX + FORCE_PADDING;
               const svgCenterY = centerY + FORCE_PADDING;
 
-              const arrowLength = 90;
-
               return (
                 <View
                   key={`forces-${objectPhysics.index}`}
@@ -400,7 +428,7 @@ export default function ResultScreen() {
                       )
 
                       // calc horiz offset
-                      const spacing = 18;
+                      const spacing = 35;
                       const offX = (directionIndex - (sameDirectionForces.length-1)/2) * spacing
                       const startX = svgCenterX + offX;
 
