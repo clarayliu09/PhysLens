@@ -14,6 +14,7 @@ let LOADING_TEXTS: string[] = [
   "Currently doing positive work...",
   "Consulting Newton...",
   "Did you know? An object can be moving even when the net force is zero",
+  "Making sure gravity is still working...",
 ]
 
 export default function AnalyzingScreen() {
@@ -126,15 +127,21 @@ export default function AnalyzingScreen() {
   }, [imageUri]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((current) => {
-        if (current >= 0.9) {
-          return current;
-        }
+    const startTime = Date.now();
 
-        const remaining = 0.9 - current;
-        return current + remaining * 0.07;
-      });
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+
+      // starst off fast then gradually slows down
+      // approaches 99% but only reaches 100% when analysis finishes
+      const estimatedProgress = Math.min(
+        0.99,
+        0.99 * (1 - Math.exp(-elapsed / 22))
+      );
+
+      setProgress((current) =>
+        current === 1 ? 1 : estimatedProgress
+      );
     }, 300);
 
     return () => clearInterval(interval);
@@ -142,10 +149,17 @@ export default function AnalyzingScreen() {
 
   useEffect(() => {
     const textInterval = setInterval(() => {
-      setLoadingText(
-        LOADING_TEXTS[Math.floor(Math.random() * LOADING_TEXTS.length)]
-      );
-    }, 3000); // change every 3 seconds
+      setLoadingText((previous) => {
+        // prevent the same msg from appearing 2x in a row
+        const alts = LOADING_TEXTS.filter(
+          (text) => text !== previous
+        );
+
+        return alts[
+          Math.floor(Math.random() * alts.length)
+        ];
+      });
+    }, 5000); // change every 5s
 
     return () => clearInterval(textInterval);
   }, []);
@@ -158,28 +172,15 @@ export default function AnalyzingScreen() {
     }).start();
   }, [progress]);
 
-  /*
-  // fake 4-sec loading screen for now
-  useEffect(() => {
-    //start and save timer
-    const timer = setTimeout(() => { 
-      // replace analyzing screen with results screen and send imageUri
-      router.replace({
-        pathname: "/results", 
-        params: {imageUri}
-      });
-    }, 4000);
-
-    //cancel the timer if effect ends early
-    return () => clearTimeout(timer); 
-  }, []);
-  */
-
   return (
     <ScreenBackground>
       <View style={styles.container}>
 
         <Text style={styles.title}>Analyzing scene...</Text>
+
+        <Text style={styles.disclaimer}>
+          This may take 1–2 minutes
+        </Text>
 
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: "700",
     color: COLORS.text,
-    marginBottom: 10,
+    marginBottom: 5,
   },
 
   subtitle: {
@@ -231,15 +232,23 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
+  disclaimer: {
+    fontSize: 14,
+    color: COLORS.text,
+    opacity: 0.65,
+    textAlign: "center",
+    marginBottom: 15,
+  },
+
   progressContainer: {
-  width: "75%",
-  alignItems: "center",
-  gap: 10,
-},
+    width: "75%",
+    alignItems: "center",
+    gap: 10,
+  },
 
   progressTrack: {
     width: "100%",
-    height: 15,
+    height: 30,
     backgroundColor: COLORS.text,
     borderRadius: 8,
     overflow: "hidden",
