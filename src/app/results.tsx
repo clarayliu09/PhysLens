@@ -278,7 +278,7 @@ export default function ResultScreen() {
   const bottomArrowOverflow = Math.max(0, lowestArrowY - h);
 
   // Extra room between arrows and the next section
-  const bottomSpacing = bottomArrowOverflow + 24;
+  const bottomSpacing = bottomArrowOverflow + 10;
 
   const OBJECT_COLORS = [
     "#FF453A", // 0: red
@@ -556,10 +556,12 @@ export default function ResultScreen() {
                       {getObjectName(index)}
                     </Text>
 
+                    {/*
                     <Text style={styles.cardConfidence}>
                       {Math.round(object.confidence * 100)}%
                     </Text>
-
+                    */}
+          
                     <Ionicons
                       name={expanded ? "chevron-up" : "chevron-down"}
                       size={20}
@@ -689,9 +691,11 @@ export default function ResultScreen() {
                 {getObjectName(index)}
               </Text>
 
+              {/*
               <Text style={styles.cardConfidence}>
                 {Math.round(object.confidence * 100)}%
               </Text>
+              */}
 
               <Ionicons
                 name="add"

@@ -88,7 +88,7 @@ export default function HomeScreen() {
               <View style={styles.featureTextContainer}>
                 <Text style={styles.featureTitle}>1. Capture a Scene</Text>
                 <Text style={styles.featureDescription}>
-                  Take a photo or upload an image of objects around you.
+                  Take a photo or upload an image of objects around you. Make sure the images are clearly in the frame for better accuracy
                 </Text>
               </View>
             </View>
