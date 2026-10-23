@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Fragment, useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, {
   Line,
   Polygon,
-  Text as SvgText
+  Text as SvgText,
+  TSpan,
 } from "react-native-svg";
 
 import LinkedExplanation from "../components/LinkedExplanation";
@@ -38,6 +39,65 @@ type ObjectPhysics = {
 type ObjectExplanation = {
   index: number;
   summary: string;
+}
+
+type ForceLabel = {
+  symbol: string;
+  subscript: string;
+};
+
+function getForceLabel(force: Force, forces: Force[]): ForceLabel {
+  if (force.type === "gravity") {
+    return { symbol: "F", subscript: "g" };
+  }
+
+  const sameTypeForces = forces.filter(
+    (f) => f.type === force.type
+  );
+
+  const forceNumber =
+    sameTypeForces.findIndex((f) => f.id === force.id) + 1;
+
+  const subscript =
+    sameTypeForces.length === 1
+      ? ""
+      : String(forceNumber);
+
+  switch (force.type) {
+    case "normal":
+      return { symbol: "N", subscript };
+
+    case "tension":
+      return { symbol: "T", subscript };
+
+    case "friction":
+      return { symbol: "f", subscript };
+
+    default:
+      return { symbol: "F", subscript };
+  }
+}
+
+function getForceDescription(force: Force): string {
+  if (force.type === "gravity") {
+    return "Gravitational force from Earth";
+  }
+
+  const source = force.id.split("_on_")[0].replaceAll("_", " ");
+
+  switch (force.type) {
+    case "normal":
+      return `Normal force from ${source}`;
+
+    case "tension":
+      return `Tension force from ${source}`;
+
+    case "friction":
+      return `Friction force from ${source}`;
+
+    default:
+      return `Force from ${source}`;
+  }
 }
 
 const DISPLAY_HEIGHT = 450;
@@ -100,6 +160,7 @@ export default function ResultScreen() {
 
   const [selectedObjectIndices, setSelectedObjectIndices] = useState<number[]>([0, 1, 2]);
   const [showAllObjects, setShowAllObjects] = useState(false);
+  const [showForceLegend, setShowForceLegend] = useState(false);
 
   useEffect(() => {
     const firstThree = detectedObjects
@@ -435,19 +496,9 @@ export default function ResultScreen() {
 
                       let endX = startX;
                       let endY = svgCenterY;
-                      let label = "";
                       let arrowPoints = "";
 
-                      // short force labels
-                      if (force.type === "gravity") {
-                        label = "Fg";
-                      } else if (force.type === "normal") {
-                        label = "FN";
-                      } else if (force.type === "tension") {
-                        label = "FT";
-                      } else if (force.type === "friction") {
-                        label = "Ff";
-                      }
+                      const label = getForceLabel(force, objectPhysics.forces);
 
                       //label = force.id // overrides it for now (debugging purposes)
 
@@ -488,14 +539,35 @@ export default function ResultScreen() {
                             fill={objectColor}
                           />
 
+                          {/* White outline behind the force label */}
+                          <SvgText
+                            x={startX + 8}
+                            y={endY}
+                            fill="#FFFFFF"
+                            stroke="#FFFFFF"
+                            strokeWidth={3}
+                            strokeLinejoin="round"
+                            fontSize={16}
+                            fontWeight="bold"
+                          >
+                            {label.symbol}
+                            <TSpan dy={5} fontSize={10} fontWeight="500">
+                              {label.subscript}
+                            </TSpan>
+                          </SvgText>
+
+                          {/* Colored force label on top */}
                           <SvgText
                             x={startX + 8}
                             y={endY}
                             fill={objectColor}
-                            fontSize="15"
+                            fontSize={16}
                             fontWeight="bold"
                           >
-                            {label}
+                            {label.symbol}
+                            <TSpan dy={5} fontSize={10} fontWeight="500">
+                              {label.subscript}
+                            </TSpan>
                           </SvgText>
 
                         </Fragment>
@@ -519,7 +591,148 @@ export default function ResultScreen() {
               );
             })}
 
+            {/* Floating force legend button */}
+            <Pressable
+              style={styles.legendFloatingButton}
+              onPress={() => setShowForceLegend(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open force legend"
+            >
+              <Ionicons
+                name="list-outline"
+                size={23}
+                color="#FFFFFF"
+              />
+              </Pressable>
         </View>
+
+          <Modal
+            visible={showForceLegend}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowForceLegend(false)}
+            statusBarTranslucent
+          >
+            <View style={styles.legendOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setShowForceLegend(false)}
+                accessibilityLabel="Close force legend"
+              />
+
+              <View style={styles.legendModal}>
+                <View style={styles.legendModalHeader}>
+                  <View style={styles.legendModalTitleRow}>
+                    <Ionicons
+                      name="list-outline"
+                      size={23}
+                      color={COLORS.green}
+                      marginBottom="14"
+                    />
+                    <Text style={styles.legendModalTitle}>
+                      Force Legend
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={() => setShowForceLegend(false)}
+                    hitSlop={12}
+                    accessibilityLabel="Close force legend"
+                  >
+                    <Ionicons
+                      name="close"
+                      size={25}
+                      color="#718475"
+                    />
+                  </Pressable>
+                </View>
+
+                <ScrollView
+                  style={styles.legendScroll}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {selectedObjects
+                    .filter(({ index }) => isObjectVisible(index))
+                    .map(({ index }) => {
+                      const objectPhysics = physicsResults.find(
+                        p => p.index === index
+                      );
+
+                      const activeForces = (objectPhysics?.forces ?? []).filter(
+                        force => isForceVisible(index, force.id)
+                      );
+
+                      return (
+                        <View key={index} style={styles.legendObject}>
+                          <View style={styles.legendObjectHeader}>
+                            <View
+                              style={[
+                                styles.legendColor,
+                                { backgroundColor: getObjectColor(index) },
+                              ]}
+                            />
+
+                            <Text style={styles.legendObjectName}>
+                              {getObjectName(index)}
+                            </Text>
+                          </View>
+
+                          {activeForces.length === 0 ? (
+                    <Text style={styles.legendDescription}>
+                      No forces currently displayed
+                    </Text>
+                  ) : (
+                    activeForces.map(force => {
+                            const label = getForceLabel(
+                              force,
+                              objectPhysics!.forces
+                            );
+
+                            return (
+                              <View
+                                key={force.id}
+                                style={styles.legendForceRow}
+                              >
+                                <View style={styles.legendSymbolRow}>
+                                  <Text
+                                    style={[
+                                      styles.legendSymbol,
+                                      { color: getObjectColor(index) },
+                                    ]}
+                                  >
+                                    {label.symbol}
+                                  </Text>
+                                  {label.subscript !== "" && (
+                                    <Text
+                                      style={[
+                                        styles.legendSubscript,
+                                        { color: getObjectColor(index) },
+                                      ]}
+                                    >
+                                      {label.subscript}
+                                    </Text>
+                                  )}
+                                </View>
+
+                                <Text style={styles.legendDescription}>
+                                  {getForceDescription(force)}
+                                </Text>
+                              </View>
+                            );
+                          })
+                  )}
+                        </View>
+                      );
+                    })}
+                </ScrollView>
+
+                <Text style={styles.legendNote}>
+                  Arrow colors identify objects. Arrow lengths do not
+                  represent measured force magnitudes.
+                </Text>
+              </View>
+            </View>
+          </Modal>
 
         <View style={styles.visControls}>
           <Text style={styles.sectionTitle}>
@@ -561,7 +774,7 @@ export default function ResultScreen() {
                       {Math.round(object.confidence * 100)}%
                     </Text>
                     */}
-          
+
                     <Ionicons
                       name={expanded ? "chevron-up" : "chevron-down"}
                       size={20}
@@ -751,10 +964,10 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     alignItems: "center",
-    paddingTop: 40,
+    paddingTop: 24,
     paddingHorizontal: 20,
-    paddingBottom: 60,
-    gap: 20,
+    paddingBottom: 40,
+    gap: 16,
   },
 
   imageContainer: {
@@ -766,7 +979,7 @@ const styles = StyleSheet.create({
 
   visControls: {
     width: "100%",
-    gap: 12,
+    gap: 5,
   },
 
   showMoreButton: {
@@ -812,15 +1025,13 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 12,
-
+    padding: 14,
     borderWidth: 1,
     borderColor: COLORS.grid,
-
     shadowColor: COLORS.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
 
   objectCardHeader: {
@@ -856,7 +1067,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     letterSpacing: -0.5,
     color: COLORS.text,
@@ -901,11 +1112,11 @@ const styles = StyleSheet.create({
   },
 
   forceList: {
-    marginTop: 16,
-    paddingTop: 14,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.grid,
-    gap: 12,
+    gap: 10,
   },
 
   forceSectionTitle: {
@@ -936,7 +1147,7 @@ const styles = StyleSheet.create({
   },
 
   explanationContainer: {
-    marginTop: 14,
+    marginTop: 8,
     padding: 14,
     backgroundColor: "#F8F7F2",
     borderRadius: 12,
@@ -1016,5 +1227,123 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.white,
   },
+
+  legendFloatingButton: {
+  position: "absolute",
+  right: 12,
+  bottom: 12,
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "rgba(10, 35, 28, 0.78)",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 10,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.3)",
+},
+
+legendOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0, 0, 0, 0.48)",
+  justifyContent: "center",
+  paddingHorizontal: 24,
+},
+
+legendModal: {
+  backgroundColor: COLORS.white,
+  borderRadius: 20,
+  padding: 22,
+  maxHeight: "75%",
+},
+
+legendModalHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
+legendModalTitleRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+},
+
+legendModalTitle: {
+  fontSize: 22,
+  fontWeight: "700",
+  color: COLORS.text,
+  marginBottom:14,
+},
+
+legendScroll: {
+  flexGrow: 0,
+},
+
+legendObject: {
+  borderTopWidth: 1,
+  borderTopColor: COLORS.grid,
+  paddingVertical: 14,
+  gap: 10,
+},
+
+legendObjectHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 9,
+},
+
+legendColor: {
+  width: 12,
+  height: 12,
+  borderRadius: 3,
+},
+
+legendObjectName: {
+  fontSize: 15,
+  fontWeight: "700",
+  color: COLORS.text,
+},
+
+legendForceRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  paddingLeft: 20,
+},
+
+legendSymbolRow: {
+  width: 42,
+  flexDirection: "row",
+  alignItems: "flex-end",
+},
+
+legendSymbol: {
+  fontSize: 18,
+  fontWeight: "700",
+},
+
+legendSubscript: {
+  fontSize: 11,
+  marginBottom: -2,
+},
+
+legendDescription: {
+  flex: 1,
+  fontSize: 14,
+  color: COLORS.text,
+  lineHeight: 20,
+},
+
+legendNote: {
+  fontSize: 12,
+  color: "#718475",
+  lineHeight: 18,
+  borderTopWidth: 1,
+  borderTopColor: COLORS.grid,
+  paddingTop: 12,
+  marginTop: 8,
+},
+
 });
 
