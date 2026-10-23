@@ -8,7 +8,7 @@
     "scheme": "physicsvisualizer",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/home-icon.png",
+      "icon": "./assets/images/PhysLens-icon.png",
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "PhysLens connects to the local development server to analyze images.",
         "NSAppTransportSecurity": {
@@ -36,7 +36,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#C7C3BD",
-          "image": "./assets/images/home-icon.png",
+          "image": "./assets/images/PhysLens-icon.png",
           "imageWidth": 76
         }
       ]
