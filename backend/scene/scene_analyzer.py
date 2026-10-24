@@ -2,6 +2,7 @@ import base64
 import json
 import urllib.request
 import urllib.error
+import time
 
 from pydantic import BaseModel, Field, AliasChoices
 from typing import Literal
@@ -9,6 +10,22 @@ from PIL import Image
 from io import BytesIO
 
 MODEL = "qwen3-vl:4b-instruct"
+def log_ollama_performance(result, label):
+    print(f"\n=== OLLAMA PERFORMANCE: {label} ===")
+
+    for key in [
+        "total_duration",
+        "load_duration",
+        "prompt_eval_duration",
+        "eval_duration",
+    ]:
+        value = result.get(key)
+
+        if value is not None:
+            print(f"{key}: {value / 1e9:.2f}s")
+
+    print("Prompt tokens:", result.get("prompt_eval_count"))
+    print("Generated tokens:", result.get("eval_count"))
 
 class Relationship(BaseModel):
   type: Literal[ # Literal restricts options to those listed
@@ -101,8 +118,19 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
   TASK:
   For EVERY detected object, identify:
   - detection_index: its original detection index
-  - name: a specific everyday object name
+  - name: a specific everyday object name for the actual object in the image (could be independent from its YOLO label - YOLO labels are suggestions, NOT confirmed object identities)
   - relationships: visible physical relationships with other objects or surfaces
+
+  OBJECT IDENTIFICATION:
+  - YOLO labels are approximate suggestions, not ground truth.
+  - Independently identify each object using its visual appearance.
+  - Distinguish visually similar objects by their shape and function.
+    Examples: water bottle vs vase, plate vs dining table,
+    flower arrangement vs potted plant.
+  - A detection box may contain multiple overlapping objects.
+    Name the object that best matches the intended detection.
+  - Do not retain an incorrect YOLO label merely because it was
+    provided in the detection list.
 
   For each detected object, independently inspect its
   physical relationships before moving to the next object.
@@ -238,20 +266,8 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
     method="POST"
   )
 
-  try:
-    with urllib.request.urlopen(request) as response:
-      result = json.loads(response.read())
-
-  except urllib.error.HTTPError as e:
-    error_body = e.read().decode("utf-8", errors="replace")
-
-    print("\n=== OLLAMA ERROR ===")
-    print("Status:", e.code)
-    print("URL:", e.url)
-    print("Message:", error_body)
-    print("==================================\n")
-
-    raise 
+  with urllib.request.urlopen(request) as response:
+    result = json.loads(response.read())
 
   model_output = result["message"]["content"]
 
@@ -361,7 +377,7 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
           }
       }
 
-      followup_request = urllib.request.Request(
+      followup_req = urllib.request.Request(
           "http://localhost:11434/api/chat",
           data=json.dumps(followup_request_data).encode("utf-8"),
           headers={"Content-Type": "application/json"},
@@ -369,8 +385,21 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
       )
 
       try:
-          with urllib.request.urlopen(followup_request) as response:
+          start = time.perf_counter()
+
+          with urllib.request.urlopen(followup_req) as response:
               followup_result = json.loads(response.read())
+
+          print(
+              f"[TIMING] Support check for {obj.name} "
+              f"(index {obj.detection_index}): "
+              f"{time.perf_counter() - start:.2f}s"
+          )
+
+          log_ollama_performance(
+              followup_result,
+              f"Support check: {obj.name}"
+          )
 
           support_data = json.loads(
               followup_result["message"]["content"]
@@ -428,7 +457,3 @@ def analyze_scene(image_bytes: bytes, detections: list) -> SceneAnalysis:
 
 
   return scene
-
-
-  # SceneAnalysis.model_validate(scene_data) creates a SceneAnalysis
-  #  object that takes in scene_data (which is a dictionary containing results)
