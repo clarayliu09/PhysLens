@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { fetch } from "expo/fetch";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, Line, Polygon, Text as SvgText } from "react-native-svg";
 
 import ScreenBackground from "../components/ScreenBg";
 import { COLORS } from "../constants/theme";
@@ -10,10 +11,9 @@ import { COLORS } from "../constants/theme";
 let LOADING_TEXTS: string[] = [
   "PhysLens is identifying objects, forces and physics concepts",
   "Letting Force = mass x acceleration",
-  "Neglecting negligable things...",
+  "Neglecting negligible things...",
   "Currently doing positive work...",
   "Consulting Newton...",
-  "Did you know? An object can be moving even when the net force is zero",
   "Making sure gravity is still working...",
 ]
 
@@ -25,6 +25,7 @@ export default function AnalyzingScreen() {
 
   const [progress, setProgress] = useState(0);
   const animatedProgress = useRef(new Animated.Value(0)).current;
+  const forcePulse = useRef(new Animated.Value(0)).current;
 
   const [loadingText, setLoadingText] = useState(
     LOADING_TEXTS[Math.floor(Math.random() * LOADING_TEXTS.length)]
@@ -172,17 +173,132 @@ export default function AnalyzingScreen() {
     }).start();
   }, [progress]);
 
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(forcePulse, {
+          toValue: 1,
+          duration: 1300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(forcePulse, {
+          toValue: 0,
+          duration: 1300,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [forcePulse]);
+
   return (
     <ScreenBackground>
       <View style={styles.container}>
 
-        <Text style={styles.title}>Analyzing scene...</Text>
+        <Animated.View
+          style={[
+            styles.physicsAnimation,
+            {
+              transform: [
+                {
+                  scale: forcePulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.97, 1.04],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Svg width={220} height={220} viewBox="0 0 220 220">
+            {/* Central object */}
+            <Circle
+              cx={110}
+              cy={110}
+              r={30}
+              fill="#E5EEE7"
+              stroke={COLORS.green}
+              strokeWidth={3}
+            />
+
+            <Circle cx={110} cy={110} r={5} fill={COLORS.green} />
+
+            {/* Upward force */}
+            <Line
+              x1={110}
+              y1={80}
+              x2={110}
+              y2={22}
+              stroke="#30D158"
+              strokeWidth={3}
+              strokeLinecap="round"
+            />
+            <Polygon points="110,14 102,29 118,29" fill="#30D158" />
+            <SvgText x={124} y={31} fontSize={17} fill={COLORS.text}>
+              N
+            </SvgText>
+
+            {/* Downward force */}
+            <Line
+              x1={110}
+              y1={140}
+              x2={110}
+              y2={198}
+              stroke="#FF453A"
+              strokeWidth={3}
+              strokeLinecap="round"
+            />
+            <Polygon points="110,206 102,191 118,191" fill="#FF453A" />
+            <SvgText x={124} y={198} fontSize={17} fill={COLORS.text}>
+              Fg
+            </SvgText>
+
+            {/* Leftward force */}
+            <Line
+              x1={80}
+              y1={110}
+              x2={22}
+              y2={110}
+              stroke="#0A84FF"
+              strokeWidth={3}
+              strokeLinecap="round"
+            />
+            <Polygon points="14,110 29,102 29,118" fill="#0A84FF" />
+
+            {/* Rightward force */}
+            <Line
+              x1={140}
+              y1={110}
+              x2={198}
+              y2={110}
+              stroke="#FF9F0A"
+              strokeWidth={3}
+              strokeLinecap="round"
+            />
+            <Polygon points="206,110 191,102 191,118" fill="#FF9F0A" />
+          </Svg>
+        </Animated.View>
+
+        <Text style={styles.title}>Analyzing Scene</Text>
 
         <Text style={styles.disclaimer}>
-          This may take 1–2 minutes
+          (This may take 1–2 minutes)
         </Text>
 
-        <View style={styles.progressContainer}>
+        <View style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressLabel}>
+              Analyzing your image
+            </Text>
+
+            <Text style={styles.progressText}>
+              {Math.round(progress * 100)}%
+            </Text>
+          </View>
+
           <View style={styles.progressTrack}>
             <Animated.View
               style={[
@@ -196,10 +312,6 @@ export default function AnalyzingScreen() {
               ]}
             />
           </View>
-
-          <Text style={styles.progressText}>
-            {Math.round(progress * 100)}%
-          </Text>
         </View>
 
         <Text style={styles.subtitle}>
@@ -218,6 +330,14 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
 
+  physicsAnimation: {
+    width: 220,
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+
   title: {
     fontSize: 40,
     fontWeight: "700",
@@ -233,36 +353,52 @@ const styles = StyleSheet.create({
   },
 
   disclaimer: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.text,
     opacity: 0.65,
     textAlign: "center",
     marginBottom: 15,
   },
 
-  progressContainer: {
-    width: "75%",
+  progressCard: {
+    width: "85%",
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: COLORS.grid,
+    gap: 12,
+  },
+
+  progressHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
+  },
+
+  progressLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
   },
 
   progressTrack: {
     width: "100%",
-    height: 30,
-    backgroundColor: COLORS.text,
-    borderRadius: 8,
+    height: 9,
+    backgroundColor: "#E1E9E2",
+    borderRadius: 6,
     overflow: "hidden",
   },
 
   progressFill: {
     height: "100%",
     backgroundColor: COLORS.green,
-    borderRadius: 8,
+    borderRadius: 6,
   },
 
   progressText: {
-    color: COLORS.text,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: COLORS.green,
   },
 });
