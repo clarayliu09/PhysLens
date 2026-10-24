@@ -824,7 +824,7 @@ export default function ResultScreen() {
                 </View>
 
                 {/*Expanded section */}
-                {checked && expanded && (
+                {expanded && (
                   <View style={styles.forceList}>
                     {explanation?.summary ? (
                       <View style={styles.explanationContainer}>
@@ -844,7 +844,9 @@ export default function ResultScreen() {
                       </View>
                     ) : (
                       <Text style={styles.legendDescription}>
-                        No physics explanation available.
+                        PhysLens identified forces acting on this object,
+                        but couldn't generate a detailed explanation.
+                        Check the force arrows above to explore its physics.
                       </Text>
                     )}
                   </View>
