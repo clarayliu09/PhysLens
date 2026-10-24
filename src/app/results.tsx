@@ -2,17 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Fragment, useEffect, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Svg, {
-  Line,
-  Polygon,
-  Text as SvgText,
-  TSpan,
-} from "react-native-svg";
+import Svg, { Line, Polygon, Text as SvgText, TSpan, } from "react-native-svg";
 
 import LinkedExplanation from "../components/LinkedExplanation";
 import ScreenBackground from "../components/ScreenBg";
 import { COLORS } from "../constants/theme";
 import { pickImage } from "../utils/imagePicker";
+
+const DISPLAY_HEIGHT = 450;
+const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
+const FORCE_PADDING = 110;
 
 type DetectedObject = {
   label: string,
@@ -46,63 +45,47 @@ type ForceLabel = {
   subscript: string;
 };
 
+//returns the label of a force
 function getForceLabel(force: Force, forces: Force[]): ForceLabel {
-  if (force.type === "gravity") {
-    return { symbol: "F", subscript: "g" };
-  }
+  if (force.type === "gravity") return { symbol: "F", subscript: "g" };
 
   const sameTypeForces = forces.filter(
     (f) => f.type === force.type
   );
 
-  const forceNumber =
-    sameTypeForces.findIndex((f) => f.id === force.id) + 1;
+  const forceNumber = sameTypeForces.findIndex((f) => f.id === force.id) + 1;
 
-  const subscript =
-    sameTypeForces.length === 1
-      ? ""
-      : String(forceNumber);
+  const subscript = sameTypeForces.length === 1 ? "": String(forceNumber);
 
   switch (force.type) {
     case "normal":
       return { symbol: "N", subscript };
-
     case "tension":
       return { symbol: "T", subscript };
-
     case "friction":
       return { symbol: "f", subscript };
-
     default:
       return { symbol: "F", subscript };
   }
 }
 
+//returns force description
 function getForceDescription(force: Force): string {
-  if (force.type === "gravity") {
-    return "Gravitational force from Earth";
-  }
+  if (force.type === "gravity") return "Gravitational force from Earth";
 
   const source = force.id.split("_on_")[0].replaceAll("_", " ");
 
   switch (force.type) {
     case "normal":
       return `Normal force from ${source}`;
-
     case "tension":
       return `Tension force from ${source}`;
-
     case "friction":
       return `Friction force from ${source}`;
-
     default:
       return `Force from ${source}`;
   }
 }
-
-const DISPLAY_HEIGHT = 450;
-const DISPLAY_WIDTH = DISPLAY_HEIGHT * 3/4; //4:3 ratio
-const FORCE_PADDING = 110;
 
 
 export default function ResultScreen() {
@@ -139,19 +122,16 @@ export default function ResultScreen() {
     const matchingIndices = detectedObjects
       .map((object, i) => object.label === label ? i : -1)
       .filter(i => i !== -1);
-      // .map produces a new array of same length: [0, -1, 2, -1, 4] ( -1 means that the item isn't a match )
-      // .filter results: [0, 2, 4] (these are the detection indices of the items that have the same label)
-      // matchingIndices = [0, 2, 4]
 
     // No numbering needed if the object is unique
     if (matchingIndices.length === 1) {
-      return label; // "vase"
+      return label; 
     }
 
     // Number duplicates starting from 1
     const number = matchingIndices.indexOf(index) + 1;
 
-    return `${label} ${number}`; // eg "vase 1"
+    return `${label} ${number}`; 
   };
 
   const [visibleObjects, setVisibleObjects] = useState<
@@ -160,7 +140,7 @@ export default function ResultScreen() {
 
   const [selectedObjectIndices, setSelectedObjectIndices] = useState<number[]>([0, 1, 2]);
   const [showAllObjects, setShowAllObjects] = useState(false);
-  const [showForceLegend, setShowForceLegend] = useState(false);
+  const [showVis, setShowVis] = useState(false);
 
   useEffect(() => {
     const firstThree = detectedObjects
@@ -184,7 +164,6 @@ export default function ResultScreen() {
   const [visibleForces, setVisibleForces] = useState<
     Record<string, boolean>
   >({});
-  // use "Record<string, boolean" to store whether each object is visible, indexed by detection index
 
   const [expandedObjects, setExpandedObjects] =
     useState<Record<number, boolean>>({});
@@ -196,7 +175,7 @@ export default function ResultScreen() {
     }));
   };
   
-  // Whether the object is displayed on the image
+  // whether object is displayed on the image
   const isObjectVisible = (index: number) =>
     visibleObjects[index] === true;
 
@@ -212,7 +191,7 @@ export default function ResultScreen() {
     }));
   };
 
-  // Checkbox: show/hide object and automatically enable its forces
+  // force checkbox
   const toggleObject = (index: number) => {
     const nextVisible = !isObjectVisible(index);
 
@@ -221,7 +200,7 @@ export default function ResultScreen() {
       [index]: nextVisible,
     }));
 
-    // When the object is checked, reset all its forces to ON
+    // reset forces when object is checked
     if (nextVisible) {
       setVisibleForces(prev => {
         const updated = { ...prev };
@@ -239,19 +218,19 @@ export default function ResultScreen() {
     }
   };
 
-  // Add an object to the selected list, checked by default
+  // add an object to the list
   const addObject = (index: number) => {
     setSelectedObjectIndices(prev =>
       prev.includes(index) ? prev : [...prev, index]
     );
 
-    // Automatically check the object
+    // automatically check the object
     setVisibleObjects(prev => ({
       ...prev,
       [index]: true,
     }));
 
-    // Automatically enable all its forces
+    // automatically enable all its forces
     setVisibleForces(prev => {
       const updated = { ...prev };
 
@@ -267,7 +246,7 @@ export default function ResultScreen() {
     });
   };
 
-  // Remove an object from the selected list
+  // remove an object from the selected list
   const removeObject = (index: number) => {
     setSelectedObjectIndices(prev =>
       prev.filter(i => i !== index)
@@ -279,7 +258,7 @@ export default function ResultScreen() {
     }));
   };
 
-  // Objects in the selected controls list
+  // objects in the selected controls list
   const selectedObjects = selectedObjectIndices
     .filter(index => detectedObjects[index] !== undefined)
     .map(index => ({
@@ -287,18 +266,20 @@ export default function ResultScreen() {
       index,
     }));
 
-  // Objects available to add
+  // objects available to add
   const hiddenObjects = detectedObjects
     .map((object, index) => ({ object, index }))
     .filter(({ index }) => !selectedObjectIndices.includes(index));
 
   const [imageSize, setImageSize] = useState({width:0, height:0});
 
+
+
   useEffect(() => {
     if (!imageUri) return;
 
     Image.getSize(imageUri, (width, height) => setImageSize({width:width, height:height}))
-  }, [imageUri]); //runs this code whenever the imageUri changes
+  }, [imageUri]); 
 
   let scale = 0;
   if (imageSize.width > 0 && imageSize.height > 0) {
@@ -314,7 +295,7 @@ export default function ResultScreen() {
   
   const arrowLength = 90;
 
-  // Find the lowest endpoint of any downward force arrow
+  // find the lowest endpoint of any downward force arrow
   const lowestArrowY = physicsResults.reduce((lowest, objectPhysics) => {
     if (!isObjectVisible(objectPhysics.index)) return lowest;
 
@@ -335,10 +316,10 @@ export default function ResultScreen() {
     return Math.max(lowest, centerY + arrowLength);
   }, h);
 
-  // Space needed below the image for arrows and labels
+  // space needed below the image
   const bottomArrowOverflow = Math.max(0, lowestArrowY - h);
 
-  // Extra room between arrows and the next section
+  // extra room between arrows and the next section
   const bottomSpacing = bottomArrowOverflow + 10;
 
   const OBJECT_COLORS = [
@@ -355,45 +336,26 @@ export default function ResultScreen() {
   const getObjectColor = (index: number) =>
     OBJECT_COLORS[index % OBJECT_COLORS.length];
 
-  // /* Debugging 
-  physicsResults.forEach((objectPhysics) => {
-    const detectedObject = detectedObjects[objectPhysics.index];
-    
-    if (!detectedObject) {
-      console.warn(
-        `No detected object for physics index ${objectPhysics.index}`
-      );
-      return;
-    }
-
-    const centerX = ((detectedObject.box.xmin + detectedObject.box.xmax) /2) * scale + xoff;
-    const centerY = ((detectedObject.box.ymin + detectedObject.box.ymax)/2) * scale + yoff;
-
-    console.log("Force origin:", {x: centerX, y: centerY});
-
-    console.log("Physics object index:", objectPhysics.index);
-    console.log("Matched detected object:", detectedObject);
-    console.log(
-      "Forces:",
-      JSON.stringify(objectPhysics.forces, null, 2)
-    )
-  })
-
 
   return (
     <ScreenBackground>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.pageTitle}>
+          Results
+        </Text>
+
         <View style={[styles.imageContainer, {width: w || DISPLAY_WIDTH, height: h || DISPLAY_HEIGHT, marginBottom: bottomSpacing,},]}>
           <Image 
             source={{ uri: imageUri }}
             style = {{
               width: w || DISPLAY_WIDTH,
               height: h || DISPLAY_HEIGHT,
+              borderRadius: 16,
             }}
             resizeMode = "contain"
           ></Image>
 
-          {/* Visualization Overlays (bounding boxes, forces) */}
+          {/* vis overlays (bounding boxes, forces) */}
           {detectedObjects.map((object, index) => {
             if (!isObjectVisible(index)) return null;
 
@@ -463,7 +425,7 @@ export default function ResultScreen() {
                   style={StyleSheet.absoluteFill}
                   pointerEvents="none"
                 >
-                  {/* Force arrow */}
+                  {/* force arrow */}
                   <Svg
                     width={w + FORCE_PADDING * 2}
                     height={h + FORCE_PADDING * 2}
@@ -493,14 +455,11 @@ export default function ResultScreen() {
                       const offX = (directionIndex - (sameDirectionForces.length-1)/2) * spacing
                       const startX = svgCenterX + offX;
 
-
                       let endX = startX;
                       let endY = svgCenterY;
                       let arrowPoints = "";
 
                       const label = getForceLabel(force, objectPhysics.forces);
-
-                      //label = force.id // overrides it for now (debugging purposes)
 
                       if (force.direction === "down") {
                         endY = svgCenterY + arrowLength;
@@ -511,7 +470,6 @@ export default function ResultScreen() {
                           ${endX + 6},${endY - 10}
                         `;
                       }
-
                       else if (force.direction === "up") {
                         endY = svgCenterY - arrowLength;
 
@@ -524,6 +482,27 @@ export default function ResultScreen() {
 
                       return (
                         <Fragment key={forceIndex}>
+                          
+                          {/*
+                          <Line
+                            x1={startX}
+                            y1={svgCenterY}
+                            x2={startX}
+                            y2={endY}
+                            fill="#FFFFFF"
+                            stroke="#FFFFFF"
+                            strokeWidth={5}
+                            strokeLinejoin="round"
+                          />
+
+                          <Polygon
+                            points={arrowPoints}
+                            fill="#FFFFFF"
+                            stroke="#FFFFFF"
+                            strokeWidth={3}
+                            strokeLinejoin="round"
+                          />
+                           */}
 
                           <Line
                             x1={startX}
@@ -539,15 +518,15 @@ export default function ResultScreen() {
                             fill={objectColor}
                           />
 
-                          {/* White outline behind the force label */}
+                          {/* white outline behind the force label */}
                           <SvgText
-                            x={startX + 8}
+                            x={startX+8}
                             y={endY}
                             fill="#FFFFFF"
                             stroke="#FFFFFF"
                             strokeWidth={3}
                             strokeLinejoin="round"
-                            fontSize={16}
+                            fontSize={25}
                             fontWeight="bold"
                           >
                             {label.symbol}
@@ -556,12 +535,12 @@ export default function ResultScreen() {
                             </TSpan>
                           </SvgText>
 
-                          {/* Colored force label on top */}
+                          {/* force label on top */}
                           <SvgText
-                            x={startX + 8}
+                            x={startX+8}
                             y={endY}
                             fill={objectColor}
-                            fontSize={16}
+                            fontSize={25}
                             fontWeight="bold"
                           >
                             {label.symbol}
@@ -575,7 +554,7 @@ export default function ResultScreen() {
                     })}
                   </Svg>
 
-                  {/* Center marker */}
+                  {/* center marker */}
                   <View
                     style={[
                       styles.forceOrigin,
@@ -591,15 +570,15 @@ export default function ResultScreen() {
               );
             })}
 
-            {/* Floating force legend button */}
+            {/* floating force legend button */}
             <Pressable
               style={styles.legendFloatingButton}
-              onPress={() => setShowForceLegend(true)}
+              onPress={() => setShowVis(true)}
               accessibilityRole="button"
-              accessibilityLabel="Open force legend"
+              accessibilityLabel="Open visualization controls"
             >
               <Ionicons
-                name="list-outline"
+                name="options-outline"
                 size={23}
                 color="#FFFFFF"
               />
@@ -607,16 +586,16 @@ export default function ResultScreen() {
         </View>
 
           <Modal
-            visible={showForceLegend}
+            visible={showVis}
             transparent
             animationType="fade"
-            onRequestClose={() => setShowForceLegend(false)}
+            onRequestClose={() => setShowVis(false)}
             statusBarTranslucent
           >
             <View style={styles.legendOverlay}>
               <Pressable
                 style={StyleSheet.absoluteFill}
-                onPress={() => setShowForceLegend(false)}
+                onPress={() => setShowVis(false)}
                 accessibilityLabel="Close force legend"
               />
 
@@ -624,18 +603,17 @@ export default function ResultScreen() {
                 <View style={styles.legendModalHeader}>
                   <View style={styles.legendModalTitleRow}>
                     <Ionicons
-                      name="list-outline"
+                      name="options-outline"
                       size={23}
                       color={COLORS.green}
-                      marginBottom="14"
                     />
                     <Text style={styles.legendModalTitle}>
-                      Force Legend
+                      Visualizations
                     </Text>
                   </View>
 
                   <Pressable
-                    onPress={() => setShowForceLegend(false)}
+                    onPress={() => setShowVis(false)}
                     hitSlop={12}
                     accessibilityLabel="Close force legend"
                   >
@@ -645,6 +623,16 @@ export default function ResultScreen() {
                       color="#718475"
                     />
                   </Pressable>
+                </View>
+
+                <Text style={styles.visSubtitle}>
+                  Select which physics elements to display.
+                </Text>
+
+                <View style={styles.visSectionHeader}>
+                  <Text style={styles.visSectionTitle}>
+                    Forces
+                  </Text>
                 </View>
 
                 <ScrollView
@@ -658,9 +646,7 @@ export default function ResultScreen() {
                         p => p.index === index
                       );
 
-                      const activeForces = (objectPhysics?.forces ?? []).filter(
-                        force => isForceVisible(index, force.id)
-                      );
+                      const objectForces = objectPhysics?.forces ?? [];
 
                       return (
                         <View key={index} style={styles.legendObject}>
@@ -677,50 +663,63 @@ export default function ResultScreen() {
                             </Text>
                           </View>
 
-                          {activeForces.length === 0 ? (
-                    <Text style={styles.legendDescription}>
-                      No forces currently displayed
-                    </Text>
-                  ) : (
-                    activeForces.map(force => {
-                            const label = getForceLabel(
-                              force,
-                              objectPhysics!.forces
-                            );
+                          {objectForces.length === 0 ? (
+                            <Text style={styles.legendDescription}>
+                              No forces identified
+                            </Text>
+                          ) : (
+                            objectForces.map(force => {
+                              const label = getForceLabel(force, objectForces);
+                              const enabled = isForceVisible(index, force.id);
+                              const objectColor = getObjectColor(index);
 
-                            return (
-                              <View
-                                key={force.id}
-                                style={styles.legendForceRow}
-                              >
-                                <View style={styles.legendSymbolRow}>
-                                  <Text
-                                    style={[
-                                      styles.legendSymbol,
-                                      { color: getObjectColor(index) },
-                                    ]}
-                                  >
-                                    {label.symbol}
-                                  </Text>
-                                  {label.subscript !== "" && (
+                              return (
+                                <Pressable
+                                  key={force.id}
+                                  style={styles.legendForceRow}
+                                  onPress={() => toggleForce(index, force.id)}
+                                  accessibilityRole="checkbox"
+                                  accessibilityState={{ checked: enabled }}
+                                  accessibilityLabel={`${getForceDescription(force)}, ${enabled ? "shown" : "hidden"}`}
+                                >
+                                  {/* Checkbox */}
+                                  <Ionicons
+                                    name={enabled ? "checkbox" : "square-outline"}
+                                    size={22}
+                                    color={enabled ? COLORS.green : "#718475"}
+                                  />
+
+                                  {/* Force symbol */}
+                                  <View style={styles.legendSymbolRow}>
                                     <Text
                                       style={[
-                                        styles.legendSubscript,
-                                        { color: getObjectColor(index) },
+                                        styles.legendSymbol,
+                                        { color: objectColor },
                                       ]}
                                     >
-                                      {label.subscript}
+                                      {label.symbol}
                                     </Text>
-                                  )}
-                                </View>
 
-                                <Text style={styles.legendDescription}>
-                                  {getForceDescription(force)}
-                                </Text>
-                              </View>
-                            );
-                          })
-                  )}
+                                    {label.subscript !== "" && (
+                                      <Text
+                                        style={[
+                                          styles.legendSubscript,
+                                          { color: objectColor },
+                                        ]}
+                                      >
+                                        {label.subscript}
+                                      </Text>
+                                    )}
+                                  </View>
+
+                                  {/* Force description */}
+                                  <Text style={styles.legendDescription}>
+                                    {getForceDescription(force)}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })
+                          )}
                         </View>
                       );
                     })}
@@ -730,6 +729,7 @@ export default function ResultScreen() {
                   Arrow colors identify objects. Arrow lengths do not
                   represent measured force magnitudes.
                 </Text>
+
               </View>
             </View>
           </Modal>
@@ -745,10 +745,6 @@ export default function ResultScreen() {
             const expanded = expandedObjects[index] === true;
             const objectColor = getObjectColor(index);
             const explanation = parsedExplanations.find((item) => item.index === index);
-
-            const objectPhysics = physicsResults.find(
-              p => p.index === index
-            );
 
             return (
               <View key={index} style={styles.objectCard}>
@@ -798,52 +794,6 @@ export default function ResultScreen() {
                 {/*Expanded section */}
                 {checked && expanded && (
                   <View style={styles.forceList}>
-                    <Text style={styles.forceSectionTitle}>
-                      FORCES
-                    </Text>
-
-                    {(objectPhysics?.forces ?? []).map(force => (
-                      <Pressable
-                        key={force.id}
-                        style={styles.forceRow}
-                        onPress={() => toggleForce(index, force.id)}
-                      >
-                        <Ionicons
-                          name={
-                            isForceVisible(index, force.id)
-                              ? "checkbox"
-                              : "square-outline"
-                          }
-                          size={21}
-                          color={
-                            isForceVisible(index, force.id)
-                              ? objectColor
-                              : "#718475"
-                          }
-                        />
-
-                        <Text style={styles.forceName}>
-                          {force.type === "gravity"
-                            ? "Gravity"
-                            : `${force.type.charAt(0).toUpperCase()}${force.type.slice(1)} · ${force.id.split("_on_")[0]}`}
-                        </Text>
-
-                        <Ionicons
-                          name={
-                            force.direction === "up"
-                              ? "arrow-up"
-                              : force.direction === "down"
-                                ? "arrow-down"
-                                : force.direction === "left"
-                                  ? "arrow-back"
-                                  : "arrow-forward"
-                          }
-                          size={19}
-                          color={objectColor}
-                        />
-                      </Pressable>
-                    ))}
-
                     {explanation?.summary ? (
                       <View style={styles.explanationContainer}>
                         <View style={styles.explanationHeader}>
@@ -852,17 +802,22 @@ export default function ResultScreen() {
                             size={17}
                             color={COLORS.green}
                           />
+
                           <Text style={styles.explanationTitle}>
-                            Physics explanation
+                            Physics Explanation
                           </Text>
                         </View>
 
                         <LinkedExplanation text={explanation.summary} />
                       </View>
-                    ) : null}
-
+                    ) : (
+                      <Text style={styles.legendDescription}>
+                        No physics explanation available.
+                      </Text>
+                    )}
                   </View>
                 )}
+
               </View>
             );
           })}
@@ -973,8 +928,17 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: "relative",
     overflow: "visible",
-    marginTop: 20,
     marginBottom: 10,
+  },
+
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    color: COLORS.text,
+    textAlign: "center",
+    marginTop:30,
+    marginBottom: -5,
   },
 
   visControls: {
@@ -1071,6 +1035,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: -0.5,
     color: COLORS.text,
+    marginBottom:5,
   },
 
   objectRow: {
@@ -1273,7 +1238,6 @@ legendModalTitle: {
   fontSize: 22,
   fontWeight: "700",
   color: COLORS.text,
-  marginBottom:14,
 },
 
 legendScroll: {
@@ -1343,6 +1307,26 @@ legendNote: {
   borderTopColor: COLORS.grid,
   paddingTop: 12,
   marginTop: 8,
+},
+
+visSubtitle: {
+  fontSize: 13,
+  color: "#718475",
+  marginTop: 6,
+  marginBottom: 18,
+},
+
+visSectionHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingBottom: 10,
+},
+
+visSectionTitle: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: COLORS.text,
 },
 
 });
