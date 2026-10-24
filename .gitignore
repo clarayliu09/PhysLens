@@ -45,3 +45,7 @@ example
 # specific files/folders
 test_qwen.py
 /.vscode
+
+# Python cache files
+__pycache__/
+*.pyc
