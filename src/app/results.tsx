@@ -355,7 +355,7 @@ export default function ResultScreen() {
 
     return objectPhysics.forces
       .filter(force => isForceVisible(objectPhysics.index, force.id))
-      .map(force => {
+      .map((force, forceIndex) => {
         const sameDirectionForces = objectPhysics.forces.filter(
           f =>
             isForceVisible(objectPhysics.index, f.id) &&
@@ -408,7 +408,7 @@ export default function ResultScreen() {
         }
 
         return {
-          key: `${objectPhysics.index}:${force.id}`,
+          key: `${objectPhysics.index}:${forceIndex}`,
           objectIndex: objectPhysics.index,
           startX,
           startY,
@@ -628,7 +628,7 @@ export default function ResultScreen() {
                   </Pressable>
                 </View>
 
-                <Text style={styles.visSubtitle}>
+                <Text style={styles.legendSubtitle}>
                   Select which physics elements to display.
                 </Text>
 
@@ -749,6 +749,27 @@ export default function ResultScreen() {
           <Text style={styles.sectionTitle}>
             Detected Objects ({numObjects})
           </Text>
+
+          {detectedObjects.length === 0 && (
+            <View style={styles.emptyStateCard}>
+              <View style={styles.emptyStateHeader}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={22}
+                  color={COLORS.green}
+                />
+
+                <Text style={styles.emptyStateTitle}>
+                  No objects detected
+                </Text>
+              </View>
+
+              <Text style={styles.emptyStateDescription}>
+                PhysLens couldn't identify any supported objects in this image.
+                Try another photo with a clearly visible object.
+              </Text>
+            </View>
+          )}
           
           {/*Object cards */}
           {selectedObjects.map(({object, index}) => {
@@ -919,13 +940,6 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "transparent",
-  },
-
-  image: {
-    width: DISPLAY_WIDTH,
-    height: DISPLAY_HEIGHT,
-    resizeMode: "contain",
   },
 
   scrollContent: {
@@ -939,7 +953,6 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: "relative",
     overflow: "visible",
-    marginBottom: 10,
   },
 
   pageTitle: {
@@ -1043,30 +1056,6 @@ const styles = StyleSheet.create({
     color: "#718475",
   },
 
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-  },
-
-  objectRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: "white",
-    borderRadius: 10,
-  },
-
-  objectLabel: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#07111F",
-  },
-
   confidence: {
     fontSize: 15,
     color: "#555",
@@ -1096,32 +1085,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  forceSectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#718475",
-    letterSpacing: 1,
-  },
-
-  forceName: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
-  },
-
-  forceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  forceOrigin: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-
   explanationContainer: {
     marginTop: 8,
     padding: 14,
@@ -1144,19 +1107,12 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  explanationText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: COLORS.text,
-  },
-
   returnButton: {
     width: "100%",
     marginBottom: 20,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
-    borderWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1205,158 +1161,185 @@ const styles = StyleSheet.create({
   },
 
   legendFloatingButton: {
-  position: "absolute",
-  right: 12,
-  bottom: 12,
-  width: 44,
-  height: 44,
-  borderRadius: 22,
-  backgroundColor: "rgba(10, 35, 28, 0.78)",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 10,
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.3)",
-},
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(10, 35, 28, 0.78)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
 
-legendOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.48)",
-  justifyContent: "center",
-  paddingHorizontal: 24,
-},
+  legendOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
 
-legendModal: {
-  backgroundColor: COLORS.white,
-  borderRadius: 20,
-  padding: 22,
-  maxHeight: "75%",
-},
+  legendModal: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 22,
+    maxHeight: "75%",
+  },
 
-legendModalHeader: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-},
+  legendModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
 
-legendModalTitleRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-},
+  legendModalTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
 
-legendModalTitle: {
-  fontSize: 22,
-  fontWeight: "700",
-  color: COLORS.text,
-},
+  legendModalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
 
-legendScroll: {
-  flexGrow: 0,
-},
+  legendScroll: {
+    flexGrow: 0,
+  },
 
-legendObject: {
-  borderTopWidth: 1,
-  borderTopColor: COLORS.grid,
-  paddingVertical: 14,
-  gap: 10,
-},
+  legendObject: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.grid,
+    paddingVertical: 14,
+    gap: 10,
+  },
 
-legendObjectHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 9,
-},
+  legendObjectHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
 
-legendColor: {
-  width: 12,
-  height: 12,
-  borderRadius: 3,
-},
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+  },
 
-legendObjectName: {
-  fontSize: 15,
-  fontWeight: "700",
-  color: COLORS.text,
-},
+  legendObjectName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
 
-legendForceRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 12,
-  paddingLeft: 20,
-},
+  legendForceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingLeft: 20,
+  },
 
-legendSymbolRow: {
-  width: 30,
-  flexDirection: "row",
-  alignItems: "flex-end",
-},
+  legendSymbolRow: {
+    width: 30,
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
 
-legendSymbol: {
-  fontSize: 18,
-  fontWeight: "700",
-},
+  legendSymbol: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
 
-legendSubscript: {
-  fontSize: 11,
-  marginBottom: -2,
-},
+  legendSubscript: {
+    fontSize: 11,
+    marginBottom: -2,
+  },
 
-legendDescription: {
-  flex: 1,
-  fontSize: 14,
-  color: COLORS.text,
-  lineHeight: 20,
-},
+  legendDescription: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
 
-legendNote: {
-  fontSize: 12,
-  color: "#718475",
-  lineHeight: 18,
-  borderTopWidth: 1,
-  borderTopColor: COLORS.grid,
-  paddingTop: 12,
-  marginTop: 8,
-},
+  legendNote: {
+    fontSize: 12,
+    color: "#718475",
+    lineHeight: 18,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.grid,
+    paddingTop: 12,
+    marginTop: 8,
+  },
 
-visSubtitle: {
-  fontSize: 13,
-  color: "#718475",
-  marginTop: 10,
-  marginBottom: 16,
-},
+  legendSubtitle: {
+    fontSize: 13,
+    color: "#718475",
+    marginTop: 10,
+    marginBottom: 16,
+  },
 
-tabs: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  marginBottom: 14,
-},
+  tabs: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
 
-tab: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 7,
-  paddingHorizontal: 14,
-  paddingVertical: 6,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: "#DCE4DA",
-  backgroundColor: "#F3F4EF",
-},
+  tab: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#DCE4DA",
+    backgroundColor: "#F3F4EF",
+  },
 
-tabActive: {
-  backgroundColor: COLORS.green,
-  borderColor: COLORS.green,
-},
+  tabActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
 
-tabActiveText: {
-  fontSize: 14,
-  fontWeight: "600",
-  color: "#FFFFFF",
-},
+  tabActiveText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+
+  emptyStateCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#DAE4D9",
+    padding: 18,
+    gap: 10,
+  },
+
+  emptyStateHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+
+  emptyStateDescription: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#627A6D",
+  },
 
 });
 
