@@ -69,11 +69,11 @@ export default function HomeScreen() {
       </View>
 
       <Modal visible={showInfo} transparent animationType="fade" onRequestClose={() => setShowInfo(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <View style={styles.popup}>
+          <View style={styles.popupContent}>
 
             {/*close button */}
-            <Pressable style={styles.modalClose} onPress={()=>setShowInfo(false)}>
+            <Pressable style={styles.close} onPress={()=>setShowInfo(false)}>
               <Ionicons name="close" size={24} color={COLORS.text}/>
             </Pressable>
 
@@ -85,48 +85,65 @@ export default function HomeScreen() {
 
             <View style={styles.featureRow}>
               <Ionicons name="camera-outline" size={26} color={COLORS.green} />
+
               <View style={styles.featureTextContainer}>
+
                 <Text style={styles.featureTitle}>1. Capture a Scene</Text>
+
                 <Text style={styles.featureDescription}>
-                  Take a photo or upload an image of objects around you. Make sure the images are clearly in the frame for better accuracy
+                  Take a photo or upload an image of objects around you. Make sure the images are clearly lit and are in the frame for better accuracy
                 </Text>
+
               </View>
             </View>
 
             <View style={styles.featureRow}>
               <Ionicons name="scan-outline" size={26} color={COLORS.green} />
+
               <View style={styles.featureTextContainer}>
                 <Text style={styles.featureTitle}>2. Detect Objects</Text>
+
                 <Text style={styles.featureDescription}>
                   PhysLens uses AI to identify objects and how they interact with each other.
                 </Text>
+
               </View>
             </View>
 
             <View style={styles.featureRow}>
               <Ionicons name="git-branch-outline" size={26} color={COLORS.green} />
+
               <View style={styles.featureTextContainer}>
+
                 <Text style={styles.featureTitle}>3. Visualize Forces</Text>
+                
                 <Text style={styles.featureDescription}>
                   Explore force diagrams showing gravity, normal forces, and other
                   forces acting on the detected objects.
                 </Text>
+
               </View>
             </View>
 
             <View style={styles.featureRow}>
               <Ionicons name="book-outline" size={26} color={COLORS.green} />
+
               <View style={styles.featureTextContainer}>
+
                 <Text style={styles.featureTitle}>4. Learn the Physics</Text>
+
                 <Text style={styles.featureDescription}>
                   Read explanations and tap linked physics terms to learn more.
                 </Text>
+
               </View>
             </View>
 
           </View>
         </View>
+
       </Modal>
+
     </ScreenBackground>
   );
 }
@@ -205,7 +222,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  modalOverlay: {
+  popup: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "center",
@@ -213,7 +230,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
 
-  modalContent: {
+  popupContent: {
     width: "100%",
     maxWidth: 400,
     backgroundColor: COLORS.background,
@@ -225,7 +242,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 
-  modalClose: {
+  close: {
     alignSelf: "flex-end",
     padding: 4,
   },
