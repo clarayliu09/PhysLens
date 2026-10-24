@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Fragment, useEffect, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Svg, { Line, Polygon, Text as SvgText, TSpan, } from "react-native-svg";
+import Svg, { Circle, Line, Polygon, Text as SvgText, TSpan, } from "react-native-svg";
 
 import LinkedExplanation from "../components/LinkedExplanation";
 import ScreenBackground from "../components/ScreenBg";
@@ -336,6 +336,90 @@ export default function ResultScreen() {
   const getObjectColor = (index: number) =>
     OBJECT_COLORS[index % OBJECT_COLORS.length];
 
+  // Calculate positions for all visible force arrows
+  const visibleForceArrows = physicsResults.flatMap(objectPhysics => {
+    if (!isObjectVisible(objectPhysics.index)) return [];
+
+    const detectedObject = detectedObjects[objectPhysics.index];
+    if (!detectedObject) return [];
+
+    const centerX =
+      ((detectedObject.box.xmin + detectedObject.box.xmax) / 2) *
+      scale + xoff;
+
+    const centerY =
+      ((detectedObject.box.ymin + detectedObject.box.ymax) / 2) *
+      scale + yoff;
+
+    const objectColor = getObjectColor(objectPhysics.index);
+
+    return objectPhysics.forces
+      .filter(force => isForceVisible(objectPhysics.index, force.id))
+      .map(force => {
+        const sameDirectionForces = objectPhysics.forces.filter(
+          f =>
+            isForceVisible(objectPhysics.index, f.id) &&
+            f.direction === force.direction
+        );
+
+        const directionIndex = sameDirectionForces.findIndex(
+          f => f.id === force.id
+        );
+
+        const spacing = 35;
+        const offX =
+          (directionIndex - (sameDirectionForces.length - 1) / 2) * spacing;
+
+        const startX = centerX + offX + FORCE_PADDING;
+        const startY = centerY + FORCE_PADDING;
+
+        let endX = startX;
+        let endY = startY;
+        let arrowPoints = "";
+
+        if (force.direction === "down") {
+          endY += arrowLength;
+          arrowPoints = `
+            ${endX},${endY}
+            ${endX - 6},${endY - 10}
+            ${endX + 6},${endY - 10}
+          `;
+        } else if (force.direction === "up") {
+          endY -= arrowLength;
+          arrowPoints = `
+            ${endX},${endY}
+            ${endX - 6},${endY + 10}
+            ${endX + 6},${endY + 10}
+          `;
+        } else if (force.direction === "left") {
+          endX -= arrowLength;
+          arrowPoints = `
+            ${endX},${endY}
+            ${endX + 10},${endY - 6}
+            ${endX + 10},${endY + 6}
+          `;
+        } else if (force.direction === "right") {
+          endX += arrowLength;
+          arrowPoints = `
+            ${endX},${endY}
+            ${endX - 10},${endY - 6}
+            ${endX - 10},${endY + 6}
+          `;
+        }
+
+        return {
+          key: `${objectPhysics.index}:${force.id}`,
+          objectIndex: objectPhysics.index,
+          startX,
+          startY,
+          endX,
+          endY,
+          arrowPoints,
+          objectColor,
+          label: getForceLabel(force, objectPhysics.forces),
+        };
+      });
+  });
 
   return (
     <ScreenBackground>
@@ -389,186 +473,105 @@ export default function ResultScreen() {
             );
           })}
 
-          {imageSize.width > 0 && imageSize.height > 0 &&
-            physicsResults.map((objectPhysics) => {
-              if (!isObjectVisible(objectPhysics.index)) {
-                return null;
-              }
+          {/* force overlays (all arrows first, then labels) */}
+          {imageSize.width > 0 && imageSize.height > 0 && (
+            <View
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            >
+              <Svg
+                width={w + FORCE_PADDING * 2}
+                height={h + FORCE_PADDING * 2}
+                style={{
+                  position: "absolute",
+                  left: -FORCE_PADDING,
+                  top: -FORCE_PADDING,
+                }}
+              >
+                {/* PASS 1: All force arrows */}
+                {visibleForceArrows.map(arrow => (
+                  <Fragment key={`arrow-${arrow.key}`}>
+                    <Line
+                      x1={arrow.startX}
+                      y1={arrow.startY}
+                      x2={arrow.endX}
+                      y2={arrow.endY}
+                      stroke={arrow.objectColor}
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                    />
 
-              const detectedObject =
-                detectedObjects[objectPhysics.index];
+                    <Polygon
+                      points={arrow.arrowPoints}
+                      fill={arrow.objectColor}
+                    />
+                  </Fragment>
+                ))}
 
-              const objectColor = getObjectColor(objectPhysics.index);
+                {/* PASS 2: All force origin markers */}
+                {physicsResults.map(objectPhysics => {
+                  if (!isObjectVisible(objectPhysics.index)) return null;
 
-              if (!detectedObject) {
-                return null;
-              }
+                  const object = detectedObjects[objectPhysics.index];
+                  if (!object) return null;
 
-              const centerX =
-                ((detectedObject.box.xmin +
-                  detectedObject.box.xmax) / 2) *
-                  scale +
-                xoff;
+                  const centerX =
+                    ((object.box.xmin + object.box.xmax) / 2) *
+                    scale + xoff + FORCE_PADDING;
 
-              const centerY =
-                ((detectedObject.box.ymin +
-                  detectedObject.box.ymax) / 2) *
-                  scale +
-                yoff;
+                  const centerY =
+                    ((object.box.ymin + object.box.ymax) / 2) *
+                    scale + yoff + FORCE_PADDING;
 
-              const svgCenterX = centerX + FORCE_PADDING;
-              const svgCenterY = centerY + FORCE_PADDING;
+                  return (
+                    <Circle
+                      key={`origin-${objectPhysics.index}`}
+                      cx={centerX}
+                      cy={centerY}
+                      r={5}
+                      fill={getObjectColor(objectPhysics.index)}
+                    />
+                  );
+                })}
 
-              return (
-                <View
-                  key={`forces-${objectPhysics.index}`}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                >
-                  {/* force arrow */}
-                  <Svg
-                    width={w + FORCE_PADDING * 2}
-                    height={h + FORCE_PADDING * 2}
-                    style={{
-                      position: "absolute",
-                      left: -FORCE_PADDING,
-                      top: -FORCE_PADDING,
-                    }}
-                  >
-                    {objectPhysics.forces.filter(force => isForceVisible(objectPhysics.index, force.id)).map((force, forceIndex) => {
-                      // force-arrow rendering will only process enabled forces
+                {/* PASS 3: All force labels */}
+                {visibleForceArrows.map(arrow => (
+                  <Fragment key={`label-${arrow.key}`}>
+                    {/* White outline */}
+                    <SvgText
+                      x={arrow.endX + 8}
+                      y={arrow.endY}
+                      fill="#FFFFFF"
+                      stroke="#FFFFFF"
+                      strokeWidth={3}
+                      strokeLinejoin="round"
+                      fontSize={22}
+                      fontWeight="bold"
+                    >
+                      {arrow.label.symbol}
+                      <TSpan dy={4} fontSize={10} fontWeight="500">
+                        {arrow.label.subscript}
+                      </TSpan>
+                    </SvgText>
 
-                      //all forces on this object pointing in the same direction
-                      const sameDirectionForces = objectPhysics.forces.filter(
-                        (f) =>
-                          isForceVisible(objectPhysics.index, f.id) &&
-                          f.direction === force.direction
-                      );
-
-                      //find which one this specific force is
-                      const directionIndex = sameDirectionForces.findIndex(
-                        (f) => f.id === force.id
-                      )
-
-                      // calc horiz offset
-                      const spacing = 35;
-                      const offX = (directionIndex - (sameDirectionForces.length-1)/2) * spacing
-                      const startX = svgCenterX + offX;
-
-                      let endX = startX;
-                      let endY = svgCenterY;
-                      let arrowPoints = "";
-
-                      const label = getForceLabel(force, objectPhysics.forces);
-
-                      if (force.direction === "down") {
-                        endY = svgCenterY + arrowLength;
-
-                        arrowPoints = `
-                          ${endX},${endY}
-                          ${endX - 6},${endY - 10}
-                          ${endX + 6},${endY - 10}
-                        `;
-                      }
-                      else if (force.direction === "up") {
-                        endY = svgCenterY - arrowLength;
-
-                        arrowPoints = `
-                          ${endX},${endY}
-                          ${endX - 6},${endY + 10}
-                          ${endX + 6},${endY + 10}
-                        `;
-                      }
-
-                      return (
-                        <Fragment key={forceIndex}>
-                          
-                          {/*
-                          <Line
-                            x1={startX}
-                            y1={svgCenterY}
-                            x2={startX}
-                            y2={endY}
-                            fill="#FFFFFF"
-                            stroke="#FFFFFF"
-                            strokeWidth={5}
-                            strokeLinejoin="round"
-                          />
-
-                          <Polygon
-                            points={arrowPoints}
-                            fill="#FFFFFF"
-                            stroke="#FFFFFF"
-                            strokeWidth={3}
-                            strokeLinejoin="round"
-                          />
-                           */}
-
-                          <Line
-                            x1={startX}
-                            y1={svgCenterY}
-                            x2={startX}
-                            y2={endY}
-                            stroke={objectColor}
-                            strokeWidth={3}
-                          />
-
-                          <Polygon
-                            points={arrowPoints}
-                            fill={objectColor}
-                          />
-
-                          {/* white outline behind the force label */}
-                          <SvgText
-                            x={startX+8}
-                            y={endY}
-                            fill="#FFFFFF"
-                            stroke="#FFFFFF"
-                            strokeWidth={3}
-                            strokeLinejoin="round"
-                            fontSize={25}
-                            fontWeight="bold"
-                          >
-                            {label.symbol}
-                            <TSpan dy={5} fontSize={10} fontWeight="500">
-                              {label.subscript}
-                            </TSpan>
-                          </SvgText>
-
-                          {/* force label on top */}
-                          <SvgText
-                            x={startX+8}
-                            y={endY}
-                            fill={objectColor}
-                            fontSize={25}
-                            fontWeight="bold"
-                          >
-                            {label.symbol}
-                            <TSpan dy={5} fontSize={10} fontWeight="500">
-                              {label.subscript}
-                            </TSpan>
-                          </SvgText>
-
-                        </Fragment>
-                      );
-                    })}
-                  </Svg>
-
-                  {/* center marker */}
-                  <View
-                    style={[
-                      styles.forceOrigin,
-                      {
-                        left: centerX - 5,
-                        top: centerY - 5,
-                        backgroundColor: objectColor,
-                      },
-                    ]}
-                  />
-                </View>
-
-              );
-            })}
+                    {/* Colored label */}
+                    <SvgText
+                      x={arrow.endX + 8}
+                      y={arrow.endY}
+                      fill={arrow.objectColor}
+                      fontSize={22}
+                      fontWeight="bold"
+                    >
+                      {arrow.label.symbol}
+                      <TSpan dy={4} fontSize={10} fontWeight="500">
+                        {arrow.label.subscript}
+                      </TSpan>
+                    </SvgText>
+                  </Fragment>
+                ))}
+              </Svg>
+            </View>
+          )}
 
             {/* floating force legend button */}
             <Pressable
@@ -919,10 +922,10 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     alignItems: "center",
-    paddingTop: 24,
+    paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 40,
-    gap: 16,
+    gap: 20,
   },
 
   imageContainer: {
@@ -932,13 +935,21 @@ const styles = StyleSheet.create({
   },
 
   pageTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     letterSpacing: -0.5,
     color: COLORS.text,
     textAlign: "center",
     marginTop:30,
     marginBottom: -5,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: -0.3,
+    color: COLORS.text,
+    marginBottom:5,
   },
 
   visControls: {
@@ -989,7 +1000,8 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: COLORS.grid,
     shadowColor: COLORS.text,
@@ -1030,14 +1042,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: -0.5,
-    color: COLORS.text,
-    marginBottom:5,
-  },
-
   objectRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1060,20 +1064,20 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
-
   boundingBox: {
     position: "absolute",
-    borderWidth: 2,
-    borderColor: "#FF3B30",
+    borderWidth: 1.5,
+    borderRadius: 5,
+    //opacity: 0.85,
   },
 
   boxLabel: {
     alignSelf: "flex-start",
-    backgroundColor: "#FF3B30",
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 12,
     paddingHorizontal: 4,
     paddingVertical: 2,
+    borderBottomRightRadius: 5,
   },
 
   forceList: {
@@ -1108,7 +1112,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#007AFF",
   },
 
   explanationContainer: {
