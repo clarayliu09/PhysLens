@@ -632,10 +632,18 @@ export default function ResultScreen() {
                   Select which physics elements to display.
                 </Text>
 
-                <View style={styles.visSectionHeader}>
-                  <Text style={styles.visSectionTitle}>
-                    Forces
-                  </Text>
+                <View style={styles.tabs}>
+                  <View style={[styles.tab, styles.tabActive]}>
+                    <Ionicons
+                      name="arrow-up-outline"
+                      size={16}
+                      color="#FFFFFF"
+                    />
+
+                    <Text style={styles.tabActiveText}>
+                      Forces
+                    </Text>
+                  </View>
                 </View>
 
                 <ScrollView
@@ -729,8 +737,8 @@ export default function ResultScreen() {
                 </ScrollView>
 
                 <Text style={styles.legendNote}>
-                  Arrow colors identify objects. Arrow lengths do not
-                  represent measured force magnitudes.
+                  Colors identify objects. Lengths do not
+                  represent measured magnitudes.
                 </Text>
 
               </View>
@@ -1280,7 +1288,7 @@ legendForceRow: {
 },
 
 legendSymbolRow: {
-  width: 42,
+  width: 30,
   flexDirection: "row",
   alignItems: "flex-end",
 },
@@ -1315,21 +1323,39 @@ legendNote: {
 visSubtitle: {
   fontSize: 13,
   color: "#718475",
-  marginTop: 6,
-  marginBottom: 18,
+  marginTop: 10,
+  marginBottom: 16,
 },
 
-visSectionHeader: {
+tabs: {
   flexDirection: "row",
   alignItems: "center",
   gap: 8,
-  paddingBottom: 10,
+  marginBottom: 14,
 },
 
-visSectionTitle: {
-  fontSize: 16,
-  fontWeight: "700",
-  color: COLORS.text,
+tab: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 7,
+  paddingHorizontal: 14,
+  paddingVertical: 6,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#DCE4DA",
+  backgroundColor: "#F3F4EF",
+},
+
+tabActive: {
+  backgroundColor: COLORS.green,
+  borderColor: COLORS.green,
+},
+
+tabActiveText: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#FFFFFF",
 },
 
 });
