@@ -36,12 +36,25 @@ def generate_explanations(scene, physics_data):
   - Use only the provided scene relationships and physics results.
   - Explain each force and which object exerts it.
   - Connect forces to relevant high-school physics principles.
-  - Do not invent forces, directions, magnitudes, or motion.
-  - Do not assume equilibrium unless established.
   - If a supporting surface is unknown, say so.
-  - Keep each explanation to 2-4 sentences.
   - Include one explanation for every physics result.
   - Preserve each object's index.
+  - Objects with identical names must still receive separate explanations.
+
+  EXPLANATION STYLE:
+  - Write 3-4 concise, educational sentences per object.
+  - First explain the source and direction of each force.
+  - Explain the condition for equilibrium when relevant
+    - For two opposing forces, explain that their magnitudes
+      are equal if the object is in equilibrium.
+    - For multiple forces, explain that their vector sum
+      must be zero for equilibrium.
+    - Do not assume equilibrium or known force magnitudes.
+  - Avoid repeating force directions in the second sentence.
+  - Do not add generic statements about related physics laws
+    or the limitations of analyzing photographs.
+  - Every sentence should introduce useful physics information.
+  - Do not invent forces, magnitudes, or motion.
 
   Return ONLY valid JSON:
   {{
