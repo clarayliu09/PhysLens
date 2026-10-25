@@ -4,6 +4,47 @@ import urllib.error
 
 MODEL = "qwen3-vl:4b-instruct"
 
+def format(force, physics_data):
+  force_dict = force.model_dump(exclude={"id"})
+
+  if "_on_" not in force.id:
+    return force_dict
+
+  source, target = force.id.split("_on_", 1)
+
+  def resolve_name(identifier):
+    parts = identifier.rsplit("_", 1)
+
+    if len(parts) == 2 and parts[1].isdigit():
+      index = int(parts[1])
+
+      obj = next(
+        (r for r in physics_data if r["index"] == index),
+        None
+      )
+
+      if obj is not None:
+        # number objects only when multiple objects share the same name
+        matching_objects = [
+          r for r in physics_data
+          if r["name"] == obj["name"]
+        ]
+
+        if len(matching_objects) == 1: return obj["name"]
+        matching_indices = sorted(r["index"] for r in matching_objects)
+
+        number = matching_indices.index(index) + 1
+
+        return f"{obj['name']} {number}"
+
+    return identifier.replace("_", " ")
+  
+
+  force_dict["source"] = resolve_name(source)
+  force_dict["target"] = resolve_name(target)
+
+  return force_dict
+
 def generate_explanations(scene, physics_data):
 
   # Convert Pydantic objects into JSON-compatible dictionaries
@@ -13,7 +54,7 @@ def generate_explanations(scene, physics_data):
     {
       **obj,
       "forces": [
-          force.model_dump()
+          format(force, physics_data)
           for force in obj["forces"]
       ]
     }
@@ -30,7 +71,7 @@ def generate_explanations(scene, physics_data):
   {json.dumps(physics_dict)}
 
   TASK:
-  Write a short, clear explanation for each object.
+  Write a short, clear explanation for EVERY object in the input.
 
   RULES:
   - Use only the provided scene relationships and physics results.
@@ -40,6 +81,15 @@ def generate_explanations(scene, physics_data):
   - Include one explanation for every physics result.
   - Preserve each object's index.
   - Objects with identical names must still receive separate explanations.
+  - Use the "source" and "target" fields to identify objects.
+    Do not interpret the raw force "id" when writing explanations.
+  - When multiple objects share the same name, ALWAYS use their
+    exact numbered names (e.g., "apple 1", "apple 2", "apple 3").
+    Never replace these names with phrases like "another apple",
+    "the other apple", or "the first apple".
+  - Every force listed under an object acts ON that object.
+    Describe the force as being exerted BY its "source" ON its "target".
+    Never reverse this relationship.
 
   EXPLANATION STYLE:
   - Write 3-4 concise, educational sentences per object.
