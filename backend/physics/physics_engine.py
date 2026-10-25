@@ -6,6 +6,38 @@ class Force(BaseModel):
   id: str # "obj1_on_obj2"
   #reaction: str # the id of the force that's the third law pair
 
+# find the supporting object using its position and name
+def find_supporting_object(object_index, supporting_name, detections, results):
+  current_box = detections[object_index]["box"]
+  current_center_x = (current_box["xmin"] + current_box["xmax"]) / 2
+  current_bottom = current_box["ymax"]
+
+  candidates = []
+
+  for index, detection in enumerate(detections):
+    if index == object_index: continue
+
+    if results[index]["name"] != supporting_name: continue
+
+    candidate_box = detection["box"]
+    candidate_center_x = (candidate_box["xmin"] + candidate_box["xmax"]) / 2
+    candidate_top = candidate_box["ymin"]
+
+    # supporting object should be below the current object
+    if candidate_top < current_box["ymin"]: continue
+
+    horizontal_distance = abs(candidate_center_x - current_center_x)
+    vertical_distance = abs(candidate_top - current_bottom)
+
+    score = horizontal_distance + vertical_distance
+    candidates.append((score, index))
+
+  if not candidates: return None
+
+  candidates.sort()
+  return candidates[0][1]
+
+
 def analyze_physics(scene, detections):
 
   results = [] #list of data, each element represents an object
@@ -64,6 +96,15 @@ def analyze_physics(scene, detections):
       # B (acting obj) pushes upward on A (the object whose force[] we're adding to)
       if relationship.type == "supported_by":
 
+          # find B using its position instead of only its name
+          supporting_index = (
+            find_supporting_object(object.detection_index, acting_obj, detections, results)
+            if acting_obj is not None else None
+          )
+
+          if supporting_index is not None:
+            label = f"{acting_obj}_{supporting_index}_on_{object.name}_{object.detection_index}"
+
           obj_physics["forces"].append(
             Force(
               type="normal",
@@ -73,7 +114,10 @@ def analyze_physics(scene, detections):
           ) 
 
           # find B if B is in the stored physics results
-          supporting_obj_physics = next((r for r in results if r["name"] == acting_obj), None)
+          supporting_obj_physics = (
+            results[supporting_index]
+            if supporting_index is not None else None
+          )
 
           # Add A pushing down on B to list of forces acting on B
           if supporting_obj_physics is not None:
@@ -81,7 +125,7 @@ def analyze_physics(scene, detections):
               Force(
                 type="normal",
                 direction="down",
-                id = f"{object.name}_on_{acting_obj}"
+                id=f"{object.name}_{object.detection_index}_on_{acting_obj}_{supporting_index}"
               )
             )
 

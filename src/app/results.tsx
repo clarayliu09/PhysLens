@@ -46,16 +46,16 @@ type ForceLabel = {
 };
 
 //returns the label of a force
-function getForceLabel(force: Force, forces: Force[]): ForceLabel {
+function getForceLabel(force: Force, forces: Force[], forceIndex: number): ForceLabel {
   if (force.type === "gravity") return { symbol: "F", subscript: "g" };
 
-  const sameTypeForces = forces.filter(
-    (f) => f.type === force.type
-  );
+  const sameTypeIndices = forces
+    .map((f, i) => ({ force: f, index: i }))
+    .filter(item => item.force.type === force.type)
+    .map(item => item.index);
 
-  const forceNumber = sameTypeForces.findIndex((f) => f.id === force.id) + 1;
-
-  const subscript = sameTypeForces.length === 1 ? "": String(forceNumber);
+  const forceNumber = sameTypeIndices.indexOf(forceIndex) + 1;
+  const subscript = sameTypeIndices.length === 1 ? "" : String(forceNumber);
 
   switch (force.type) {
     case "normal":
@@ -73,7 +73,12 @@ function getForceLabel(force: Force, forces: Force[]): ForceLabel {
 function getForceDescription(force: Force): string {
   if (force.type === "gravity") return "Gravitational force from Earth";
 
-  const source = force.id.split("_on_")[0].replaceAll("_", " ");
+  const sourceId = force.id.split("_on_")[0];
+
+  // Convert backend 0-based indices to frontend 1-based numbering
+  const source = sourceId.replace(/_(\d+)$/, (_, index) => {
+    return ` ${Number(index) + 1}`;
+  }).replaceAll("_", " ");
 
   switch (force.type) {
     case "normal":
@@ -179,11 +184,11 @@ export default function ResultScreen() {
   const isObjectVisible = (index: number) =>
     visibleObjects[index] === true;
 
-  const isForceVisible = (index: number, id: string) =>
-    visibleForces[`${index}:${id}`] !== false;
+  const isForceVisible = (index: number, forceIndex: number) =>
+    visibleForces[`${index}:${forceIndex}`] !== false;
 
-  const toggleForce = (index: number, id: string) => {
-    const key = `${index}:${id}`;
+  const toggleForce = (index: number, forceIndex: number) => {
+    const key = `${index}:${forceIndex}`;
 
     setVisibleForces(prev => ({
       ...prev,
@@ -209,8 +214,8 @@ export default function ResultScreen() {
           p => p.index === index
         );
 
-        objectPhysics?.forces.forEach(force => {
-          updated[`${index}:${force.id}`] = true;
+        objectPhysics?.forces.forEach((force, forceIndex) => {
+          updated[`${index}:${forceIndex}`] = true;
         });
 
         return updated;
@@ -238,8 +243,8 @@ export default function ResultScreen() {
         p => p.index === index
       );
 
-      objectPhysics?.forces.forEach(force => {
-        updated[`${index}:${force.id}`] = true;
+      objectPhysics?.forces.forEach((force, forceIndex) => {
+        updated[`${index}:${forceIndex}`] = true;
       });
 
       return updated;
@@ -300,9 +305,9 @@ export default function ResultScreen() {
     if (!isObjectVisible(objectPhysics.index)) return lowest;
 
     const hasDownwardForce = objectPhysics.forces.some(
-      (force) =>
+      (force, forceIndex) =>
         force.direction === "down" &&
-        isForceVisible(objectPhysics.index, force.id)
+        isForceVisible(objectPhysics.index, forceIndex)
     );
 
     if (!hasDownwardForce) return lowest;
@@ -353,72 +358,71 @@ export default function ResultScreen() {
 
     const objectColor = getObjectColor(objectPhysics.index);
 
-    return objectPhysics.forces
-      .filter(force => isForceVisible(objectPhysics.index, force.id))
-      .map((force, forceIndex) => {
-        const sameDirectionForces = objectPhysics.forces.filter(
-          f =>
-            isForceVisible(objectPhysics.index, f.id) &&
-            f.direction === force.direction
-        );
+    return objectPhysics.forces.flatMap((force, forceIndex) => {
+      if (!isForceVisible(objectPhysics.index, forceIndex)) return [];
 
-        const directionIndex = sameDirectionForces.findIndex(
-          f => f.id === force.id
-        );
+      const sameDirectionIndices = objectPhysics.forces
+        .map((f, i) => ({ force: f, index: i }))
+        .filter(item =>
+          item.force.direction === force.direction &&
+          isForceVisible(objectPhysics.index, item.index)
+        )
+        .map(item => item.index);
 
-        const spacing = 35;
-        const offX =
-          (directionIndex - (sameDirectionForces.length - 1) / 2) * spacing;
+      const directionIndex = sameDirectionIndices.indexOf(forceIndex);
+      const spacing = 35;
+      const offX =
+        (directionIndex - (sameDirectionIndices.length - 1) / 2) * spacing;
 
-        const startX = centerX + offX + FORCE_PADDING;
-        const startY = centerY + FORCE_PADDING;
+      const startX = centerX + offX + FORCE_PADDING;
+      const startY = centerY + FORCE_PADDING;
 
-        let endX = startX;
-        let endY = startY;
-        let arrowPoints = "";
+      let endX = startX;
+      let endY = startY;
+      let arrowPoints = "";
 
-        if (force.direction === "down") {
-          endY += arrowLength;
-          arrowPoints = `
-            ${endX},${endY}
-            ${endX - 6},${endY - 10}
-            ${endX + 6},${endY - 10}
-          `;
-        } else if (force.direction === "up") {
-          endY -= arrowLength;
-          arrowPoints = `
-            ${endX},${endY}
-            ${endX - 6},${endY + 10}
-            ${endX + 6},${endY + 10}
-          `;
-        } else if (force.direction === "left") {
-          endX -= arrowLength;
-          arrowPoints = `
-            ${endX},${endY}
-            ${endX + 10},${endY - 6}
-            ${endX + 10},${endY + 6}
-          `;
-        } else if (force.direction === "right") {
-          endX += arrowLength;
-          arrowPoints = `
-            ${endX},${endY}
-            ${endX - 10},${endY - 6}
-            ${endX - 10},${endY + 6}
-          `;
-        }
+      if (force.direction === "down") {
+        endY += arrowLength;
+        arrowPoints = `
+          ${endX},${endY}
+          ${endX - 6},${endY - 10}
+          ${endX + 6},${endY - 10}
+        `;
+      } else if (force.direction === "up") {
+        endY -= arrowLength;
+        arrowPoints = `
+          ${endX},${endY}
+          ${endX - 6},${endY + 10}
+          ${endX + 6},${endY + 10}
+        `;
+      } else if (force.direction === "left") {
+        endX -= arrowLength;
+        arrowPoints = `
+          ${endX},${endY}
+          ${endX + 10},${endY - 6}
+          ${endX + 10},${endY + 6}
+        `;
+      } else if (force.direction === "right") {
+        endX += arrowLength;
+        arrowPoints = `
+          ${endX},${endY}
+          ${endX - 10},${endY - 6}
+          ${endX - 10},${endY + 6}
+        `;
+      }
 
-        return {
-          key: `${objectPhysics.index}:${forceIndex}`,
-          objectIndex: objectPhysics.index,
-          startX,
-          startY,
-          endX,
-          endY,
-          arrowPoints,
-          objectColor,
-          label: getForceLabel(force, objectPhysics.forces),
-        };
-      });
+      return [{
+        key: `${objectPhysics.index}:${forceIndex}`,
+        objectIndex: objectPhysics.index,
+        startX,
+        startY,
+        endX,
+        endY,
+        arrowPoints,
+        objectColor,
+        label: getForceLabel(force, objectPhysics.forces, forceIndex),
+      }];
+    });
   });
 
   return (
@@ -587,7 +591,8 @@ export default function ResultScreen() {
               />
               </Pressable>
         </View>
-
+          
+          {/*popup*/}
           <Modal
             visible={showVis}
             transparent
@@ -679,16 +684,16 @@ export default function ResultScreen() {
                               No forces identified
                             </Text>
                           ) : (
-                            objectForces.map(force => {
-                              const label = getForceLabel(force, objectForces);
-                              const enabled = isForceVisible(index, force.id);
+                            objectForces.map((force, forceIndex) => {
+                              const label = getForceLabel(force, objectForces, forceIndex);
+                              const enabled = isForceVisible(index, forceIndex);
                               const objectColor = getObjectColor(index);
 
                               return (
                                 <Pressable
-                                  key={force.id}
+                                  key={`${index}-${force.id}-${forceIndex}`}
                                   style={styles.legendForceRow}
-                                  onPress={() => toggleForce(index, force.id)}
+                                  onPress={() => toggleForce(index, forceIndex)}
                                   accessibilityRole="checkbox"
                                   accessibilityState={{ checked: enabled }}
                                   accessibilityLabel={`${getForceDescription(force)}, ${enabled ? "shown" : "hidden"}`}
