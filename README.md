@@ -1,8 +1,6 @@
 # PhysLens
 
-A project I'm doing for fun!
-
-What it is: an Ai-powered educational app where users can upload pictures and see the physics going on, as well as an explanation of what's happening.
+What it is: an AI-powered educational app where users can upload pictures and see the physics going on, as well as an explanation of what's happening.
 
 **Currently working on: phase 1**
 
