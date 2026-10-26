@@ -14,23 +14,16 @@ export default function LinkedExplanation({ text }: Props) {
     terms.map((term) => ({ term, url }))
   ).sort((a, b) => b.term.length - a.term.length);
 
-  const escapedTerms = terms.map(({ term }) =>
-    term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  );
+  const escapedTerms = terms.map(({ term }) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
-  const regex = new RegExp(
-    `\\b(${escapedTerms.join("|")})\\b`,
-    "gi"
-  );
+  const regex = new RegExp(`\\b(${escapedTerms.join("|")})\\b`,"gi");
 
   const parts = text.split(regex);
 
   return (
     <Text style={styles.explanation}>
       {parts.map((part, index) => {
-        const match = terms.find(
-          ({ term }) => term.toLowerCase() === part.toLowerCase()
-        );
+        const match = terms.find(({ term }) => term.toLowerCase() === part.toLowerCase());
 
         if (!match) {
           return <Text key={index}>{part}</Text>;
