@@ -8,6 +8,16 @@ class Force(BaseModel):
 
 # find the supporting object using its position and name
 def find_supporting_object(object_index, supporting_name, detections, results):
+  # If only one object matches the supporting name, use it directly
+  matching_indices = [
+    index for index, detection in enumerate(detections)
+    if index != object_index
+    and results[index]["name"] == supporting_name
+  ]
+
+  if len(matching_indices) == 1:
+    return matching_indices[0]
+
   current_box = detections[object_index]["box"]
   current_center_x = (current_box["xmin"] + current_box["xmax"]) / 2
   current_bottom = current_box["ymax"]

@@ -48,12 +48,12 @@ def remove_duplicate_detections(detections, iou_threshold=0.5):
         for kept in filtered:
             overlap = box_iou(detection["box"], kept["box"])
 
-            # Same class: standard duplicate removal
+            # Same label --> remove duplicate
             if detection["label"] == kept["label"] and overlap > iou_threshold:
                 duplicate = True
                 break
 
-            # Different classes: only suppress nearly identical boxes
+            # Different labels --> only remove nearby boxes
             if detection["label"] != kept["label"] and overlap > 0.85:
                 duplicate = True
                 break

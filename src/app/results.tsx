@@ -70,15 +70,27 @@ function getForceLabel(force: Force, forces: Force[], forceIndex: number): Force
 }
 
 //returns force description
-function getForceDescription(force: Force): string {
+function getForceDescription(
+  force: Force,
+  getObjectName: (index: number) => string,
+  detectedObjects: DetectedObject[]
+): string {
+
   if (force.type === "gravity") return "Gravitational force from Earth";
 
   const sourceId = force.id.split("_on_")[0];
 
-  // Convert backend 0-based indices to frontend 1-based numbering
-  const source = sourceId.replace(/_(\d+)$/, (_, index) => {
-    return ` ${Number(index) + 1}`;
-  }).replaceAll("_", " ");
+  const match = sourceId.match(/_(\d+)$/);
+
+  let source = sourceId.replaceAll("_", " ");
+
+  if (match) {
+    const sourceIndex = Number(match[1]);
+
+    if (detectedObjects[sourceIndex]) {
+      source = getObjectName(sourceIndex);
+    }
+  }
 
   switch (force.type) {
     case "normal":
@@ -696,7 +708,7 @@ export default function ResultScreen() {
                                   onPress={() => toggleForce(index, forceIndex)}
                                   accessibilityRole="checkbox"
                                   accessibilityState={{ checked: enabled }}
-                                  accessibilityLabel={`${getForceDescription(force)}, ${enabled ? "shown" : "hidden"}`}
+                                  accessibilityLabel={`${getForceDescription(force, getObjectName, detectedObjects)}, ${enabled ? "shown" : "hidden"}`}
                                 >
                                   {/* Checkbox */}
                                   <Ionicons
@@ -730,7 +742,7 @@ export default function ResultScreen() {
 
                                   {/* Force description */}
                                   <Text style={styles.legendDescription}>
-                                    {getForceDescription(force)}
+                                    {getForceDescription(force, getObjectName, detectedObjects)}
                                   </Text>
                                 </Pressable>
                               );
